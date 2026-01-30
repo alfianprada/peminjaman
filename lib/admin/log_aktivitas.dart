@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class LogAktivitasPage extends StatelessWidget {
-  const LogAktivitasPage({super.key});
+  const LogAktivitasPage({super.key, required String role});
 
   @override
   Widget build(BuildContext context) {

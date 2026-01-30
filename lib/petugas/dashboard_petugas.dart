@@ -3,7 +3,6 @@ import 'package:peminjaman_alat/petugas/log_aktivitas.dart';
 import 'package:peminjaman_alat/petugas/peminjaman_masuk.dart';
 import 'package:peminjaman_alat/petugas/profile_petugas.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../auth/login_page.dart';
 
 class DashboardPetugas extends StatefulWidget {
   const DashboardPetugas({super.key});
@@ -34,7 +33,7 @@ class _DashboardPetugasState extends State<DashboardPetugas> {
     final res = await supabase
         .from('kategori')
         .select()
-        .order('nama');
+        .order('nama_kategori');
 
     setState(() {
       kategoriList = res;
@@ -79,66 +78,58 @@ class _DashboardPetugasState extends State<DashboardPetugas> {
 
       // ================= DRAWER =================
       drawer: Drawer(
-        child: Column(
+        child: ListView(
+          padding: EdgeInsets.zero,
           children: [
             UserAccountsDrawerHeader(
-              currentAccountPicture:
-                  const CircleAvatar(child: Icon(Icons.badge)),
-              accountName: const Text('Petugas Bengkel'),
-
-              // ===== FIX ERROR LINE 78 =====
+              accountName: Text('Petugas'),
               accountEmail: Text(user?.email ?? '-'),
             ),
 
             _menuTile(
-              icon: Icons.person,
-              title: 'Profile',
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const ProfilePetugasPage(),
-                ),
-              ),
-            ),
+  icon: Icons.dashboard,
+  title: 'Dashboard',
+  onTap: () => Navigator.pushReplacement(
+    context,
+    MaterialPageRoute(
+      builder: (_) => const DashboardPetugas(),
+    ),
+  ),
+),
 
-            _menuTile(
-              icon: Icons.assignment,
-              title: 'Peminjaman Masuk',
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const PeminjamanMasukPage(),
-                ),
-              ),
-            ),
+_menuTile(
+  icon: Icons.person,
+  title: 'Profile',
+  onTap: () => Navigator.pushReplacement(
+    context,
+    MaterialPageRoute(
+      builder: (_) => const ProfilePetugasPage(),
+    ),
+  ),
+),
 
-            _menuTile(
-              icon: Icons.history,
-              title: 'Log Aktivitas',
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const LogAktivitasPage(role: 'petugas'),
-                ),
-              ),
-            ),
+_menuTile(
+  icon: Icons.assignment,
+  title: 'Peminjaman Masuk',
+  onTap: () => Navigator.pushReplacement(
+    context,
+    MaterialPageRoute(
+      builder: (_) => const PeminjamanMasukPage(),
+    ),
+  ),
+),
 
-            const Spacer(),
+_menuTile(
+  icon: Icons.history,
+  title: 'Log Aktivitas',
+  onTap: () => Navigator.pushReplacement(
+    context,
+    MaterialPageRoute(
+      builder: (_) => const LogAktivitasPage(role: 'petugas'),
+    ),
+  ),
+),
 
-            _menuTile(
-              icon: Icons.logout,
-              title: 'Logout',
-              color: Colors.red,
-              onTap: () async {
-                await supabase.auth.signOut();
-                if (!context.mounted) return;
-                Navigator.pushAndRemoveUntil(
-                  context,
-                  MaterialPageRoute(builder: (_) => const LoginPage()),
-                  (_) => false,
-                );
-              },
-            ),
           ],
         ),
       ),
@@ -162,7 +153,7 @@ class _DashboardPetugasState extends State<DashboardPetugas> {
                 children: [
                   kategoriChip('Semua', null),
                   ...kategoriList.map(
-                    (k) => kategoriChip(k['nama'], k['id']),
+                    (k) => kategoriChip(k['nama_kategori'], k['id']),
                   ),
                 ],
               ),

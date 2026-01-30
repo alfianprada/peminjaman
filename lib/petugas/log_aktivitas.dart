@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:peminjaman_alat/utils/drawer.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class LogAktivitasPage extends StatelessWidget {
@@ -12,6 +13,7 @@ class LogAktivitasPage extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Log Aktivitas')),
+      drawer: const DrawerPetugas(), 
       body: FutureBuilder(
         future: supabase
             .from('log_aktivitas')

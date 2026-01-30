@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:peminjaman_alat/utils/drawer.dart';
 import 'package:peminjaman_alat/utils/log_helper.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -110,6 +111,7 @@ Future<void> rejectPeminjaman(int id) async {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Peminjaman Masuk')),
+      drawer: const DrawerPetugas(), 
       body: FutureBuilder<List<dynamic>>(
         future: _fetchData(),
         builder: (context, snapshot) {
@@ -182,6 +184,18 @@ ElevatedButton.icon(
           );
         },
       ),
+    );
+  }
+  Widget _menuTile({
+    required IconData icon,
+    required String title,
+    required VoidCallback onTap,
+    Color color = Colors.black,
+  }) {
+    return ListTile(
+      leading: Icon(icon, color: color),
+      title: Text(title),
+      onTap: onTap,
     );
   }
 }

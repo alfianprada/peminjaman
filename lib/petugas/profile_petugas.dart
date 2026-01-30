@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:peminjaman_alat/admin/log_aktivitas.dart';
+import 'package:peminjaman_alat/petugas/dashboard_petugas.dart';
+import 'package:peminjaman_alat/petugas/peminjaman_masuk.dart';
+import 'package:peminjaman_alat/utils/drawer.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../auth/login_page.dart';
 
@@ -12,6 +16,7 @@ class ProfilePetugasPage extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: const Color(0xFFE0E0E0),
+      drawer: const DrawerPetugas(), 
       body: SafeArea(
         child: FutureBuilder(
           future: supabase
@@ -40,19 +45,58 @@ class ProfilePetugasPage extends StatelessWidget {
                   ),
                   child: Row(
                     children: [
-                      IconButton(
-                        icon: const Icon(Icons.arrow_back, color: Colors.white),
-                        onPressed: () => Navigator.pop(context),
-                      ),
-                      const SizedBox(width: 8),
-                      const Text(
-                        'Profile Petugas',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
+                      UserAccountsDrawerHeader(
+              currentAccountPicture:
+                  const CircleAvatar(child: Icon(Icons.badge)),
+              accountName: const Text('Petugas Bengkel'),
+
+              // ===== FIX ERROR LINE 78 =====
+              accountEmail: Text(user.email ?? '-'),
+            ),
+
+            _menuTile(
+  icon: Icons.dashboard,
+  title: 'Dashboard',
+  onTap: () => Navigator.pushReplacement(
+    context,
+    MaterialPageRoute(
+      builder: (_) => const DashboardPetugas(),
+    ),
+  ),
+),
+
+_menuTile(
+  icon: Icons.person,
+  title: 'Profile',
+  onTap: () => Navigator.pushReplacement(
+    context,
+    MaterialPageRoute(
+      builder: (_) => const ProfilePetugasPage(),
+    ),
+  ),
+),
+
+_menuTile(
+  icon: Icons.assignment,
+  title: 'Peminjaman Masuk',
+  onTap: () => Navigator.pushReplacement(
+    context,
+    MaterialPageRoute(
+      builder: (_) => const PeminjamanMasukPage(),
+    ),
+  ),
+),
+
+_menuTile(
+  icon: Icons.history,
+  title: 'Log Aktivitas',
+  onTap: () => Navigator.pushReplacement(
+    context,
+    MaterialPageRoute(
+      builder: (_) => const LogAktivitasPage(role: 'petugas'),
+    ),
+  ),
+),
                     ],
                   ),
                 ),
@@ -129,6 +173,18 @@ class ProfilePetugasPage extends StatelessWidget {
           const Divider(thickness: 1),
         ],
       ),
+    );
+  }
+  Widget _menuTile({
+    required IconData icon,
+    required String title,
+    required VoidCallback onTap,
+    Color color = Colors.black,
+  }) {
+    return ListTile(
+      leading: Icon(icon, color: color),
+      title: Text(title),
+      onTap: onTap,
     );
   }
 }
