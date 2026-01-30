@@ -7,9 +7,18 @@ Future<void> simpanLog({
   final supabase = Supabase.instance.client;
   final user = supabase.auth.currentUser;
 
+  if (user == null) return;
+
+  // ambil role user
+  final userData = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+
   await supabase.from('log_aktivitas').insert({
-    'user_id': user?.id,
-    'role': user?.userMetadata?['role'] ?? 'unknown',
+    'user_id': user.id,
+    'role': userData['role'], // 🔴 PENTING
     'aktivitas': aktivitas,
     'peminjaman_id': peminjamanId,
   });

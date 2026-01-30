@@ -1,53 +1,127 @@
 import 'package:flutter/material.dart';
-import 'package:peminjaman_alat/admin/log_aktivitas.dart';
+import 'package:peminjaman_alat/petugas/log_aktivitas.dart';
 import 'package:peminjaman_alat/petugas/peminjaman_masuk.dart';
+import 'package:peminjaman_alat/petugas/profile_petugas.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../auth/login_page.dart';
 
-class DashboardPetugas extends StatelessWidget {
+class DashboardPetugas extends StatefulWidget {
   const DashboardPetugas({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final user = Supabase.instance.client.auth.currentUser;
+  State<DashboardPetugas> createState() => _DashboardPetugasState();
+}
 
+class _DashboardPetugasState extends State<DashboardPetugas> {
+  final supabase = Supabase.instance.client;
+  final user = Supabase.instance.client.auth.currentUser;
+
+  List kategoriList = [];
+  List alatList = [];
+
+  int? kategoriAktif; // null = semua
+  bool isLoading = true;
+
+  @override 
+  void initState() {
+    super.initState();
+    fetchKategori();
+    fetchAlat();
+  }
+
+  // ================= FETCH KATEGORI =================
+  Future<void> fetchKategori() async {
+    final res = await supabase
+        .from('kategori')
+        .select()
+        .order('nama');
+
+    setState(() {
+      kategoriList = res;
+    });
+  }
+
+  // ================= FETCH ALAT (FIX ERROR LINE 45) =================
+  Future<void> fetchAlat() async {
+    setState(() => isLoading = true);
+
+    final res = kategoriAktif == null
+        ? await supabase
+            .from('alat')
+            .select('id, nama_alat, stok, kondisi, kategori_id')
+            .order('nama_alat')
+        : await supabase
+            .from('alat')
+            .select('id, nama_alat, stok, kondisi, kategori_id')
+            .eq('kategori_id', kategoriAktif!)
+            .order('nama_alat');
+
+    setState(() {
+      alatList = res;
+      isLoading = false;
+    });
+  }
+
+  // ================= UI =================
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Dashboard Petugas'),
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFF1976D2), Color(0xFF42A5F5)],
+            ),
+          ),
+        ),
       ),
 
+      // ================= DRAWER =================
       drawer: Drawer(
         child: Column(
           children: [
             UserAccountsDrawerHeader(
-              currentAccountPicture: const CircleAvatar(
-                child: Icon(Icons.badge, size: 32),
-              ),
+              currentAccountPicture:
+                  const CircleAvatar(child: Icon(Icons.badge)),
               accountName: const Text('Petugas Bengkel'),
+
+              // ===== FIX ERROR LINE 78 =====
               accountEmail: Text(user?.email ?? '-'),
+            ),
+
+            _menuTile(
+              icon: Icons.person,
+              title: 'Profile',
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const ProfilePetugasPage(),
+                ),
+              ),
             ),
 
             _menuTile(
               icon: Icons.assignment,
               title: 'Peminjaman Masuk',
-              onTap: () => Navigator.pop(context),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const PeminjamanMasukPage(),
+                ),
+              ),
             ),
-            _menuTile(
-              icon: Icons.history,
-              title: 'Riwayat Peminjaman',
-              onTap: () => Navigator.pop(context),
-            ),
+
             _menuTile(
               icon: Icons.history,
               title: 'Log Aktivitas',
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const LogAktivitasPage()),
-                );
-              },
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const LogAktivitasPage(role: 'petugas'),
+                ),
+              ),
             ),
-
 
             const Spacer(),
 
@@ -56,7 +130,7 @@ class DashboardPetugas extends StatelessWidget {
               title: 'Logout',
               color: Colors.red,
               onTap: () async {
-                await Supabase.instance.client.auth.signOut();
+                await supabase.auth.signOut();
                 if (!context.mounted) return;
                 Navigator.pushAndRemoveUntil(
                   context,
@@ -69,98 +143,121 @@ class DashboardPetugas extends StatelessWidget {
         ),
       ),
 
-      body: ListView(
+      // ================= BODY =================
+      body: Padding(
         padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Kategori Alat',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+
+            SizedBox(
+              height: 40,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                children: [
+                  kategoriChip('Semua', null),
+                  ...kategoriList.map(
+                    (k) => kategoriChip(k['nama'], k['id']),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 20),
+
+            const Text(
+              'Daftar Alat',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+
+            Expanded(
+              child: isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : alatList.isEmpty
+                      ? const Center(child: Text('Tidak ada alat'))
+                      : ListView.builder(
+                          itemCount: alatList.length,
+                          itemBuilder: (context, i) {
+                            return alatCard(alatList[i]);
+                          },
+                        ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ================= WIDGET =================
+
+  Widget kategoriChip(String label, int? id) {
+    final isActive = kategoriAktif == id;
+
+    return GestureDetector(
+      onTap: () {
+        setState(() => kategoriAktif = id);
+        fetchAlat();
+      },
+      child: Container(
+        margin: const EdgeInsets.only(right: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: isActive ? Colors.blue : Colors.white,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isActive ? Colors.white : Colors.black,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget alatCard(Map alat) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
         children: [
-          _infoCard(
-            icon: Icons.assignment,
-            title: 'Peminjaman Aktif',
-            value: '5',
-            color: Colors.blue,
-          ),
-          const SizedBox(height: 12),
-
-          _infoCard(
-            icon: Icons.pending_actions,
-            title: 'Menunggu Konfirmasi',
-            value: '2',
-            color: Colors.orange,
-          ),
-          const SizedBox(height: 24),
-
-          const Text(
-            'Menu Utama',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 12),
-
-          _menuCard(
-            icon: Icons.assignment_turned_in,
-            title: 'Konfirmasi Peminjaman',
-            subtitle: 'Setujui atau tolak peminjaman',
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const PeminjamanMasukPage(),
+          const Icon(Icons.build, color: Colors.blue, size: 34),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  alat['nama_alat'],
+                  style: const TextStyle(
+                      fontSize: 16, fontWeight: FontWeight.bold),
                 ),
-              );
-            },
+                Text('Kondisi: ${alat['kondisi']}'),
+              ],
+            ),
           ),
-
-          _menuCard(
-            icon: Icons.assignment_return,
-            title: 'Proses Pengembalian',
-            subtitle: 'Input pengembalian alat',
-            onTap: () {},
+          Column(
+            children: [
+              const Text('Stok'),
+              Text(
+                alat['stok'].toString(),
+                style: const TextStyle(
+                    fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+            ],
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _infoCard({
-    required IconData icon,
-    required String title,
-    required String value,
-    required Color color,
-  }) {
-    return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: color.withOpacity(0.15),
-          child: Icon(icon, color: color),
-        ),
-        title: Text(title),
-        trailing: Text(
-          value,
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: color,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _menuCard({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required VoidCallback onTap,
-  }) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: ListTile(
-        leading: Icon(icon, color: Colors.blue),
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-        subtitle: Text(subtitle),
-        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-        onTap: onTap,
       ),
     );
   }

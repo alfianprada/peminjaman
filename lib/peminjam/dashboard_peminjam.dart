@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:peminjaman_alat/peminjam/ajukan_peminjaman.dart';
+import 'package:peminjaman_alat/peminjam/profile_peminjam.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../auth/login_page.dart';
 import 'package:peminjaman_alat/models/keranjang_items.dart';
@@ -59,8 +60,24 @@ void hapusDariKeranjang(int alatId) {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Dashboard Peminjam'),
+  title: const Text('Hallo Petugas, Alfian'),
+  actions: const [
+    Padding(
+      padding: EdgeInsets.only(right: 12),
+      child: Icon(Icons.notifications),
+    ),
+  ],
+  flexibleSpace: Container(
+    decoration: const BoxDecoration(
+      gradient: LinearGradient(
+        colors: [Color(0xFF1976D2), Color(0xFF42A5F5)],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
       ),
+    ),
+  ),
+),
+
       floatingActionButton: keranjang.isEmpty
     ? null
     : FloatingActionButton.extended(
@@ -86,6 +103,17 @@ void hapusDariKeranjang(int alatId) {
               ),
               accountName: const Text('Peminjam'),
               accountEmail: Text(user?.email ?? '-'),
+            ),
+
+            _menuTile(
+              icon: Icons.person,
+              title: 'Profile',
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const ProfilePeminjamPage()),
+                );
+              },
             ),
 
             _menuTile(
