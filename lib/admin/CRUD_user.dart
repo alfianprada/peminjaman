@@ -22,8 +22,30 @@ class _CrudUserPageState extends State<CrudUserPage> {
     return await supabase
         .from('users')
         .select()
-        .inFilter('role', ['petugas', 'peminjam'])
         .order('created_at');
+  }
+
+  // ===== ROLE STYLE =====
+  Color _roleColor(String role) {
+    switch (role) {
+      case 'admin':
+        return Colors.blue;
+      case 'petugas':
+        return Colors.orange;
+      default:
+        return Colors.green;
+    }
+  }
+
+  String _roleLabel(String role) {
+    switch (role) {
+      case 'admin':
+        return 'Admin';
+      case 'petugas':
+        return 'Petugas';
+      default:
+        return 'User';
+    }
   }
 
   // ===== EDIT USER =====
@@ -46,8 +68,9 @@ class _CrudUserPageState extends State<CrudUserPage> {
             DropdownButtonFormField<String>(
               value: role,
               items: const [
+                DropdownMenuItem(value: 'admin', child: Text('Admin')),
                 DropdownMenuItem(value: 'petugas', child: Text('Petugas')),
-                DropdownMenuItem(value: 'peminjam', child: Text('Peminjam')),
+                DropdownMenuItem(value: 'peminjam', child: Text('User')),
               ],
               onChanged: (v) => role = v!,
               decoration: const InputDecoration(labelText: 'Role'),
@@ -76,7 +99,7 @@ class _CrudUserPageState extends State<CrudUserPage> {
     );
   }
 
-  // ===== HAPUS USER =====
+  // ===== DELETE =====
   void _deleteUser(BuildContext context, String id) {
     showDialog(
       context: context,
@@ -102,120 +125,164 @@ class _CrudUserPageState extends State<CrudUserPage> {
     );
   }
 
-  Color _roleColor(String role) =>
-      role == 'petugas' ? Colors.orange : Colors.green;
-
-  IconData _roleIcon(String role) =>
-      role == 'petugas' ? Icons.badge : Icons.person;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Manajemen User')),
-      body: FutureBuilder<List<dynamic>>(
-        future: _getUsers(),
-        builder: (context, snapshot) {
-          if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          final users = snapshot.data!;
-          if (users.isEmpty) {
-            return const Center(child: Text('Belum ada user'));
-          }
-
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: users.length,
-            itemBuilder: (context, i) {
-              final user = users[i];
-
-              return Card(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor:
-                        _roleColor(user['role']).withOpacity(0.15),
-                    child: Icon(
-                      _roleIcon(user['role']),
-                      color: _roleColor(user['role']),
-                    ),
-                  ),
-                  title: Text(
-                    user['nama'],
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(user['email']),
-                      const SizedBox(height: 4),
-                      Chip(
-                        label: Text(
-                          user['role'].toUpperCase(),
-                          style: const TextStyle(color: Colors.white),
-                        ),
-                        backgroundColor: _roleColor(user['role']),
-                      ),
-                    ],
-                  ),
-                  trailing: PopupMenuButton(
-                    itemBuilder: (_) => [
-                      const PopupMenuItem(
-                        value: 'edit',
-                        child: Text('Edit'),
-                      ),
-                      const PopupMenuItem(
-                        value: 'delete',
-                        child: Text('Hapus'),
-                      ),
-                    ],
-                    onSelected: (v) {
-                      if (v == 'edit') {
-                        _editUser(context, user);
-                      } else {
-                        _deleteUser(context, user['id']);
-                      }
-                    },
-                  ),
-                ),
-              );
-            },
-          );
-        },
-      ),
-
-      // ===== FAB =====
-      floatingActionButton: Column(
-        mainAxisSize: MainAxisSize.min,
+  // ===== UI =====
+@override
+Widget build(BuildContext context) {
+  return Scaffold(
+    backgroundColor: const Color(0xFFE0E0E0),
+    body: SafeArea(
+      child: Column(
         children: [
-          FloatingActionButton.extended(
-            heroTag: 'peminjam',
-            backgroundColor: Colors.green,
-            onPressed: () async {
-              widget.onAddPeminjam();
-              await Future.delayed(const Duration(milliseconds: 500));
-              setState(() {});
-            },
-            label: const Text('Tambah Peminjam'),
-            icon: const Icon(Icons.person_add),
+          // ===== HEADER (SAMA PROFILE ADMIN) =====
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Color(0xFF0D47A1), Color(0xFF1976D2)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+            child: Row(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.arrow_back, color: Colors.white),
+                  onPressed: () => Navigator.pop(context),
+                ),
+                const SizedBox(width: 8),
+                const Text(
+                  'Manajemen User',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 10),
-          FloatingActionButton.extended(
-            heroTag: 'petugas',
-            backgroundColor: Colors.orange,
-            onPressed: () async {
-              widget.onAddPetugas();
-              await Future.delayed(const Duration(milliseconds: 500));
-              setState(() {});
-            },
-            label: const Text('Tambah Petugas'),
-            icon: const Icon(Icons.badge),
+
+          // ===== CONTENT =====
+          Expanded(
+            child: FutureBuilder<List<dynamic>>(
+              future: _getUsers(),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                final users = snapshot.data!;
+                return ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: users.length,
+                  itemBuilder: (context, i) {
+                    final user = users[i];
+                    final color = _roleColor(user['role']);
+
+                    return Card(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Row(
+                          children: [
+                            CircleAvatar(
+                              radius: 26,
+                              backgroundColor: color,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    "Name : ${user['nama']}",
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  Text("Email : ${user['email']}"),
+                                  const SizedBox(height: 6),
+                                  Chip(
+                                    label: Text(
+                                      _roleLabel(user['role']),
+                                      style: const TextStyle(color: Colors.white),
+                                    ),
+                                    backgroundColor: color,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            PopupMenuButton(
+                              itemBuilder: (_) => user['role'] == 'admin'
+                                  ? const [
+                                      PopupMenuItem(
+                                        enabled: false,
+                                        child: Text('Admin tidak dapat diubah'),
+                                      ),
+                                    ]
+                                  : const [
+                                      PopupMenuItem(value: 'edit', child: Text('Edit')),
+                                      PopupMenuItem(value: 'delete', child: Text('Hapus')),
+                                    ],
+                              onSelected: (v) {
+                                if (v == 'edit') _editUser(context, user);
+                                if (v == 'delete') _deleteUser(context, user['id']);
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
           ),
         ],
       ),
+    ),
+
+    // ===== FLOATING BUTTON =====
+    floatingActionButton: Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _fab(
+          color: Colors.orange,
+          icon: Icons.badge,
+          label: 'Tambah Petugas',
+          onTap: widget.onAddPetugas,
+        ),
+        const SizedBox(height: 8),
+        _fab(
+          color: Colors.green,
+          icon: Icons.person,
+          label: 'Tambah Peminjam',
+          onTap: widget.onAddPeminjam,
+        ),
+      ],
+    ),
+    );
+  }
+
+  Widget _fab({
+    required Color color,
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return FloatingActionButton.extended(
+      heroTag: label,
+      backgroundColor: color,
+      icon: Icon(icon),
+      label: Text(label),
+      onPressed: () async {
+        onTap();
+        await Future.delayed(const Duration(milliseconds: 500));
+        setState(() {});
+      },
     );
   }
 }

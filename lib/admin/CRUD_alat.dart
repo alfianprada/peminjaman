@@ -149,78 +149,127 @@ class _CrudAlatPageState extends State<CrudAlatPage> {
     return Colors.green;
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Manajemen Alat')),
-      body: FutureBuilder<List<dynamic>>(
-        future: _getAlat(),
-        builder: (context, snapshot) {
-          if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          final alat = snapshot.data!;
-          if (alat.isEmpty) {
-            return const Center(child: Text('Belum ada alat'));
-          }
-
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: alat.length,
-            itemBuilder: (context, i) {
-              final a = alat[i];
-
-              return Card(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
+    @override
+Widget build(BuildContext context) {
+  return Scaffold(
+    backgroundColor: const Color(0xFFE0E0E0),
+    body: SafeArea(
+      child: Column(
+        children: [
+          // ===== HEADER (SAMA SEPERTI PROFILE ADMIN) =====
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Color(0xFF0D47A1), Color(0xFF1976D2)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+            child: Row(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.arrow_back, color: Colors.white),
+                  onPressed: () => Navigator.pop(context),
                 ),
-                child: ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor:
-                        _stokColor(a['stok']).withOpacity(0.15),
-                    child: Icon(
-                      Icons.build,
-                      color: _stokColor(a['stok']),
-                    ),
+                const SizedBox(width: 8),
+                const Text(
+                  'Manajemen Alat',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
                   ),
-                  title: Text(
-                    a['nama_alat'],
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Kategori: ${a['kategori']?['nama_kategori'] ?? '-'}'),
-                      Text('Lokasi: ${a['lokasi'] ?? '-'}'),
-                      const SizedBox(height: 4),
-                      Chip(
-                        label: Text('Stok: ${a['stok']}'),
-                        backgroundColor: _stokColor(a['stok']),
+                ),
+              ],
+            ),
+          ),
+
+          // ===== CONTENT =====
+          Expanded(
+            child: FutureBuilder<List<dynamic>>(
+              future: _getAlat(),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                final alat = snapshot.data!;
+                if (alat.isEmpty) {
+                  return const Center(child: Text('Belum ada alat'));
+                }
+
+                return ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: alat.length,
+                  itemBuilder: (context, i) {
+                    final a = alat[i];
+
+                    return Card(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
                       ),
-                    ],
-                  ),
-                  trailing: PopupMenuButton(
-                    itemBuilder: (_) => const [
-                      PopupMenuItem(value: 'edit', child: Text('Edit')),
-                      PopupMenuItem(value: 'delete', child: Text('Hapus')),
-                    ],
-                    onSelected: (v) {
-                      if (v == 'edit') _formAlat(alat: a);
-                      if (v == 'delete') _hapusAlat(a['id']);
-                    },
-                  ),
-                ),
-              );
-            },
-          );
-        },
+                      child: ListTile(
+                        leading: CircleAvatar(
+                          backgroundColor:
+                              _stokColor(a['stok']).withOpacity(0.15),
+                          child: Icon(
+                            Icons.build,
+                            color: _stokColor(a['stok']),
+                          ),
+                        ),
+                        title: Text(
+                          a['nama_alat'],
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Kategori: ${a['kategori']?['nama_kategori'] ?? '-'}',
+                            ),
+                            Text('Lokasi: ${a['lokasi'] ?? '-'}'),
+                            const SizedBox(height: 4),
+                            Chip(
+                              label: Text(
+                                'Stok: ${a['stok']}',
+                                style: const TextStyle(color: Colors.white),
+                              ),
+                              backgroundColor: _stokColor(a['stok']),
+                            ),
+                          ],
+                        ),
+                        trailing: PopupMenuButton(
+                          itemBuilder: (_) => const [
+                            PopupMenuItem(value: 'edit', child: Text('Edit')),
+                            PopupMenuItem(value: 'delete', child: Text('Hapus')),
+                          ],
+                          onSelected: (v) {
+                            if (v == 'edit') _formAlat(alat: a);
+                            if (v == 'delete') _hapusAlat(a['id']);
+                          },
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _formAlat(),
-        label: const Text('Tambah Alat'),
-        icon: const Icon(Icons.add),
-      ),
-    );
-  }
+    ),
+
+    // ===== FAB =====
+    floatingActionButton: FloatingActionButton.extended(
+      backgroundColor: const Color(0xFF1976D2),
+      onPressed: () => _formAlat(),
+      icon: const Icon(Icons.add),
+      label: const Text('Tambah Alat'),
+    ),
+  );
 }
+
+  }
+

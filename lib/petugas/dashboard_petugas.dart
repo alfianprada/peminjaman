@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:peminjaman_alat/admin/log_aktivitas.dart';
+import 'package:peminjaman_alat/petugas/peminjaman_masuk.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../auth/login_page.dart';
 
@@ -35,6 +37,17 @@ class DashboardPetugas extends StatelessWidget {
               title: 'Riwayat Peminjaman',
               onTap: () => Navigator.pop(context),
             ),
+            _menuTile(
+              icon: Icons.history,
+              title: 'Log Aktivitas',
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const LogAktivitasPage()),
+                );
+              },
+            ),
+
 
             const Spacer(),
 
@@ -85,8 +98,16 @@ class DashboardPetugas extends StatelessWidget {
             icon: Icons.assignment_turned_in,
             title: 'Konfirmasi Peminjaman',
             subtitle: 'Setujui atau tolak peminjaman',
-            onTap: () {},
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const PeminjamanMasukPage(),
+                ),
+              );
+            },
           ),
+
           _menuCard(
             icon: Icons.assignment_return,
             title: 'Proses Pengembalian',

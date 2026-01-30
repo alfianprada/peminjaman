@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:peminjaman_alat/admin/dashboard_admin.dart';
 import 'package:peminjaman_alat/splash.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
