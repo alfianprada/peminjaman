@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:peminjaman_alat/auth/login_page.dart';
 import 'package:peminjaman_alat/petugas/log_aktivitas.dart';
 import 'package:peminjaman_alat/petugas/peminjaman_masuk.dart';
 import 'package:peminjaman_alat/petugas/profile_petugas.dart';
@@ -18,29 +19,27 @@ class _DashboardPetugasState extends State<DashboardPetugas> {
   List kategoriList = [];
   List alatList = [];
 
-  int? kategoriAktif; // null = semua
+  int? kategoriAktif;
   bool isLoading = true;
 
-  @override 
+  @override
   void initState() {
     super.initState();
     fetchKategori();
     fetchAlat();
   }
 
-  // ================= FETCH KATEGORI =================
+  // ================= FETCH DATA =================
+
   Future<void> fetchKategori() async {
     final res = await supabase
         .from('kategori')
         .select()
         .order('nama_kategori');
 
-    setState(() {
-      kategoriList = res;
-    });
+    setState(() => kategoriList = res);
   }
 
-  // ================= FETCH ALAT (FIX ERROR LINE 45) =================
   Future<void> fetchAlat() async {
     setState(() => isLoading = true);
 
@@ -62,13 +61,14 @@ class _DashboardPetugasState extends State<DashboardPetugas> {
   }
 
   // ================= UI =================
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Dashboard Petugas'),
-        flexibleSpace: Container(
-          decoration: const BoxDecoration(
+        flexibleSpace: const DecoratedBox(
+          decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [Color(0xFF1976D2), Color(0xFF42A5F5)],
             ),
@@ -82,54 +82,64 @@ class _DashboardPetugasState extends State<DashboardPetugas> {
           padding: EdgeInsets.zero,
           children: [
             UserAccountsDrawerHeader(
-              accountName: Text('Petugas'),
+              accountName: const Text('Petugas'),
               accountEmail: Text(user?.email ?? '-'),
             ),
 
             _menuTile(
-  icon: Icons.dashboard,
-  title: 'Dashboard',
-  onTap: () => Navigator.pushReplacement(
-    context,
-    MaterialPageRoute(
-      builder: (_) => const DashboardPetugas(),
-    ),
-  ),
-),
+              icon: Icons.dashboard,
+              title: 'Dashboard',
+              onTap: () => Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (_) => const DashboardPetugas()),
+              ),
+            ),
 
-_menuTile(
-  icon: Icons.person,
-  title: 'Profile',
-  onTap: () => Navigator.pushReplacement(
-    context,
-    MaterialPageRoute(
-      builder: (_) => const ProfilePetugasPage(),
-    ),
-  ),
-),
+            _menuTile(
+              icon: Icons.person,
+              title: 'Profile',
+              onTap: () => Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (_) => const ProfilePetugasPage()),
+              ),
+            ),
 
-_menuTile(
-  icon: Icons.assignment,
-  title: 'Peminjaman Masuk',
-  onTap: () => Navigator.pushReplacement(
-    context,
-    MaterialPageRoute(
-      builder: (_) => const PeminjamanMasukPage(),
-    ),
-  ),
-),
+            _menuTile(
+              icon: Icons.assignment,
+              title: 'Peminjaman Masuk',
+              onTap: () => Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (_) => const PeminjamanMasukPage()),
+              ),
+            ),
 
-_menuTile(
-  icon: Icons.history,
-  title: 'Log Aktivitas',
-  onTap: () => Navigator.pushReplacement(
-    context,
-    MaterialPageRoute(
-      builder: (_) => const LogAktivitasPage(role: 'petugas'),
-    ),
-  ),
-),
+            _menuTile(
+              icon: Icons.history,
+              title: 'Log Aktivitas',
+              onTap: () => Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const LogAktivitasPage(role: 'petugas'),
+                ),
+              ),
+            ),
 
+            const Divider(),
+
+            _menuTile(
+              icon: Icons.logout,
+              title: 'Logout',
+              color: Colors.red,
+              onTap: () async {
+                await supabase.auth.signOut();
+                if (!context.mounted) return;
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (_) => const LoginPage()),
+                  (_) => false,
+                );
+              },
+            ),
           ],
         ),
       ),
@@ -146,10 +156,11 @@ _menuTile(
             ),
             const SizedBox(height: 12),
 
-            SizedBox(
-              height: 40,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
+            // ===== KATEGORI SCROLL =====
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              physics: const BouncingScrollPhysics(),
+              child: Row(
                 children: [
                   kategoriChip('Semua', null),
                   ...kategoriList.map(
@@ -159,7 +170,7 @@ _menuTile(
               ),
             ),
 
-            const SizedBox(height: 20),
+            const SizedBox(height: 24),
 
             const Text(
               'Daftar Alat',
@@ -174,9 +185,7 @@ _menuTile(
                       ? const Center(child: Text('Tidak ada alat'))
                       : ListView.builder(
                           itemCount: alatList.length,
-                          itemBuilder: (context, i) {
-                            return alatCard(alatList[i]);
-                          },
+                          itemBuilder: (_, i) => alatCard(alatList[i]),
                         ),
             ),
           ],
@@ -197,8 +206,7 @@ _menuTile(
       },
       child: Container(
         margin: const EdgeInsets.only(right: 8),
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        alignment: Alignment.center,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
           color: isActive ? Colors.blue : Colors.white,
           borderRadius: BorderRadius.circular(20),
@@ -207,6 +215,7 @@ _menuTile(
           label,
           style: TextStyle(
             color: isActive ? Colors.white : Colors.black,
+            fontWeight: FontWeight.w500,
           ),
         ),
       ),
@@ -232,7 +241,9 @@ _menuTile(
                 Text(
                   alat['nama_alat'],
                   style: const TextStyle(
-                      fontSize: 16, fontWeight: FontWeight.bold),
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 Text('Kondisi: ${alat['kondisi']}'),
               ],
@@ -244,7 +255,9 @@ _menuTile(
               Text(
                 alat['stok'].toString(),
                 style: const TextStyle(
-                    fontSize: 18, fontWeight: FontWeight.bold),
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ],
           ),

@@ -125,7 +125,7 @@ class _DashboardAdminState extends State<DashboardAdmin> {
           ListTile(
             leading: const Icon(Icons.history),
             title: const Text('Log Aktivitas'),
-            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LogAktivitasPage(role: 'admin',))),
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LogAktivitasPage(rolw: 'admin',))),
           ),
           const Divider(),
           ListTile(

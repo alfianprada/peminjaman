@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:peminjaman_alat/utils/drawer.dart';
-import 'package:peminjaman_alat/utils/log_helper.dart';
+import 'package:peminjaman_alat/auth/login_page.dart';
+import 'package:peminjaman_alat/petugas/dashboard_petugas.dart';
+import 'package:peminjaman_alat/petugas/profile_petugas.dart';
+import 'package:peminjaman_alat/petugas/log_aktivitas.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:peminjaman_alat/utils/log_helper.dart';
 
 class PeminjamanMasukPage extends StatefulWidget {
   const PeminjamanMasukPage({super.key});
@@ -12,41 +15,7 @@ class PeminjamanMasukPage extends StatefulWidget {
 
 class _PeminjamanMasukPageState extends State<PeminjamanMasukPage> {
   final supabase = Supabase.instance.client;
-
-Future<List> fetchPeminjamanMasuk() async {
-  final supabase = Supabase.instance.client;
-
-  final res = await supabase
-      .from('peminjaman')
-      .select('''
-        id,
-        nama,
-        tanggal_pinjam,
-        status,
-        detail_peminjaman (
-          jumlah,
-          alat ( id, nama_alat )
-        )
-      ''')
-      .eq('status', 'pending')
-      .order('id');
-
-  return res;
-}
-Future<void> rejectPeminjaman(int id) async {
-  final supabase = Supabase.instance.client;
-
-  await supabase
-      .from('peminjaman')
-      .update({'status': 'rejected'})
-      .eq('id', id);
-
-  await simpanLog(
-  aktivitas: 'Menolak peminjaman',
-  peminjamanId: id,
-);
-
-}
+  final user = Supabase.instance.client.auth.currentUser;
 
   Future<List<dynamic>> _fetchData() async {
     return await supabase
@@ -63,13 +32,13 @@ Future<void> rejectPeminjaman(int id) async {
   }
 
   Future<void> _approve(int peminjamanId) async {
-  // ambil detail alat
+  // 1️⃣ Ambil detail peminjaman
   final details = await supabase
       .from('detail_peminjaman')
       .select()
       .eq('peminjaman_id', peminjamanId);
 
-  // kurangi stok
+  // 2️⃣ Kurangi stok tiap alat
   for (final d in details) {
     await supabase.rpc('kurangi_stok', params: {
       'alat_id_input': d['alat_id'],
@@ -77,18 +46,20 @@ Future<void> rejectPeminjaman(int id) async {
     });
   }
 
-  // update status
+  // 3️⃣ Update status
   await supabase
       .from('peminjaman')
       .update({'status': 'disetujui'})
       .eq('id', peminjamanId);
 
-  if (!mounted) return;
+  // 4️⃣ Log aktivitas petugas
   await simpanLog(
-  aktivitas: 'Menyetujui peminjaman',
-  peminjamanId: peminjamanId,
-);
+    aktivitas: 'Menyetujui peminjaman',
+    peminjamanId: peminjamanId,
+    role: 'petugas',
+  );
 
+  if (!mounted) return;
 
   ScaffoldMessenger.of(context).showSnackBar(
     const SnackBar(content: Text('Peminjaman disetujui')),
@@ -98,20 +69,119 @@ Future<void> rejectPeminjaman(int id) async {
 }
 
 
-  Future<void> _reject(int id) async {
-    await supabase
-        .from('peminjaman')
-        .update({'status': 'ditolak'})
-        .eq('id', id);
 
-    setState(() {});
-  }
+  Future<void> _reject(int peminjamanId) async {
+  // 1️⃣ Update status peminjaman
+  await supabase
+      .from('peminjaman')
+      .update({'status': 'ditolak'})
+      .eq('id', peminjamanId);
+
+  // 2️⃣ Simpan log aktivitas petugas
+  await simpanLog(
+    aktivitas: 'Menolak pengajuan peminjaman',
+    peminjamanId: peminjamanId,
+    role: 'petugas',
+  );
+
+  if (!mounted) return;
+
+  // 3️⃣ Feedback ke user
+  ScaffoldMessenger.of(context).showSnackBar(
+    const SnackBar(content: Text('Peminjaman ditolak')),
+  );
+
+  // 4️⃣ Refresh list
+  setState(() {});
+}
+
+
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Peminjaman Masuk')),
-      drawer: const DrawerPetugas(), 
+      // ================= APP BAR SAMA =================
+      appBar: AppBar(
+        title: const Text('Peminjaman Masuk'),
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFF1976D2), Color(0xFF42A5F5)],
+            ),
+          ),
+        ),
+      ),
+
+      // ================= DRAWER SAMA =================
+      drawer: Drawer(
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: [
+            UserAccountsDrawerHeader(
+              accountName: const Text('Petugas'),
+              accountEmail: Text(user?.email ?? '-'),
+            ),
+
+            _menuTile(
+              icon: Icons.dashboard,
+              title: 'Dashboard',
+              onTap: () => Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const DashboardPetugas(),
+                ),
+              ),
+            ),
+
+            _menuTile(
+              icon: Icons.person,
+              title: 'Profile',
+              onTap: () => Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const ProfilePetugasPage(),
+                ),
+              ),
+            ),
+
+            _menuTile(
+              icon: Icons.assignment,
+              title: 'Peminjaman Masuk',
+              onTap: () => Navigator.pop(context), // halaman aktif
+            ),
+
+            _menuTile(
+              icon: Icons.history,
+              title: 'Log Aktivitas',
+              onTap: () => Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const LogAktivitasPage(role: 'petugas'),
+                ),
+              ),
+            ),
+
+            const Divider(),
+
+            _menuTile(
+              icon: Icons.logout,
+              title: 'Logout',
+              color: Colors.red,
+              onTap: () async {
+                await supabase.auth.signOut();
+                if (!context.mounted) return;
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (_) => const LoginPage()),
+                  (_) => false,
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+
+      // ================= BODY =================
       body: FutureBuilder<List<dynamic>>(
         future: _fetchData(),
         builder: (context, snapshot) {
@@ -141,41 +211,20 @@ Future<void> rejectPeminjaman(int id) async {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       ElevatedButton.icon(
-  icon: const Icon(Icons.check),
-  label: const Text('Approve'),
-  style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-  onPressed: () {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Konfirmasi'),
-        content: const Text('Setujui peminjaman ini?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Batal'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              await _approve(p['id']);
-            },
-            child: const Text('Setujui'),
-          ),
-        ],
-      ),
-    );
-  },
-),
-
-
-ElevatedButton.icon(
-  icon: const Icon(Icons.close),
-  label: const Text('Reject'),
-  style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-  onPressed: () => rejectPeminjaman(p['id']),
-),
-
+                        icon: const Icon(Icons.check),
+                        label: const Text('Approve'),
+                        style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.green),
+                        onPressed: () => _approve(p['id']),
+                      ),
+                      const SizedBox(width: 6),
+                      ElevatedButton.icon(
+                        icon: const Icon(Icons.close),
+                        label: const Text('Reject'),
+                        style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red),
+                        onPressed: () => _reject(p['id']),
+                      ),
                     ],
                   ),
                 ),
@@ -186,6 +235,7 @@ ElevatedButton.icon(
       ),
     );
   }
+
   Widget _menuTile({
     required IconData icon,
     required String title,

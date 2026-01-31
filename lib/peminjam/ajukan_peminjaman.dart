@@ -46,94 +46,73 @@ class _AjukanPeminjamanPageState extends State<AjukanPeminjamanPage> {
   }
 
   Future<void> _submit() async {
-    if (_namaC.text.isEmpty ||
-        _alamatC.text.isEmpty ||
-        _telpC.text.isEmpty ||
-        _tglPinjam == null ||
-        _tglKembali == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Lengkapi semua data')),
-      );
-      return;
+  if (_namaC.text.isEmpty ||
+      _alamatC.text.isEmpty ||
+      _telpC.text.isEmpty ||
+      _tglPinjam == null ||
+      _tglKembali == null) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Lengkapi semua data')),
+    );
+    return;
+  }
+
+  setState(() => _loading = true);
+
+  try {
+    final supabase = Supabase.instance.client;
+    final user = supabase.auth.currentUser!;
+    
+    // 1️⃣ INSERT PEMINJAMAN (STATUS PENDING)
+    final peminjaman = await supabase
+        .from('peminjaman')
+        .insert({
+          'user_id': user.id,
+          'nama': _namaC.text,
+          'alamat': _alamatC.text,
+          'no_telepon': _telpC.text,
+          'tanggal_pinjam': _tglPinjam!.toIso8601String(),
+          'tanggal_kembali_rencana': _tglKembali!.toIso8601String(),
+          'keterangan': _ketC.text,
+          'status': 'pending',
+        })
+        .select()
+        .single();
+
+    final int peminjamanId = peminjaman['id'];
+
+    // 2️⃣ INSERT DETAIL PEMINJAMAN
+    for (final item in widget.items) {
+      await supabase.from('detail_peminjaman').insert({
+        'peminjaman_id': peminjamanId,
+        'alat_id': item.alatId,
+        'jumlah': item.jumlah,
+      });
     }
 
-    setState(() => _loading = true);
+    // 3️⃣ SIMPAN LOG PEMINJAM
+    await simpanLog(
+      aktivitas: 'Mengajukan peminjaman',
+      peminjamanId: peminjamanId,
+      role: 'peminjam',
+    );
 
-    try {
-      final supabase = Supabase.instance.client;
-final user = supabase.auth.currentUser!;
+    if (!mounted) return;
 
-final peminjaman = await supabase
-    .from('peminjaman')
-    .insert({
-      'user_id': user.id,
-      'nama': _namaC.text,
-      'alamat': _alamatC.text,
-      'no_telepon': _telpC.text,
-      'tanggal_pinjam': _tglPinjam!.toIso8601String(),
-      'tanggal_kembali_rencana': _tglKembali!.toIso8601String(),
-      'keterangan': _ketC.text,
-      'status': 'pending',
-    })
-    .select()
-    .single();
+    Navigator.pop(context);
 
-final peminjamanId = peminjaman['id'];
-
-for (final item in widget.items) {
-  if (item.alatId <= 0) {
-    throw 'ID alat tidak valid';
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Peminjaman berhasil diajukan')),
+    );
+  } catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Terjadi kesalahan')),
+    );
+  } finally {
+    setState(() => _loading = false);
   }
-
-  final alat = await supabase
-      .from('alat')
-      .select('id')
-      .eq('id', item.alatId)
-      .maybeSingle();
-
-  if (alat == null) {
-    throw 'Alat "${item.nama}" tidak ditemukan di database';
-  }
-
-  await supabase.from('detail_peminjaman').insert({
-    'peminjaman_id': peminjamanId,
-    'alat_id': item.alatId,
-    'jumlah': item.jumlah,
-    
-  });
-  await simpanLog(
-  aktivitas: 'Mengajukan peminjaman alat',
-  peminjamanId: peminjamanId,
-);
-
-  await supabase.rpc('kurangi_stok_alat', params: {
-    'p_alat_id': item.alatId,
-    'p_jumlah': item.jumlah,
-  });
-  
 }
 
-
-      if (!mounted) return;
-      Navigator.pop(context);
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Peminjaman berhasil diajukan')),
-      );
-    } catch (e) {
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(
-      content: Text(
-        e.toString().contains('Stok tidak cukup')
-            ? 'Stok alat tidak mencukupi'
-            : 'Terjadi kesalahan',
-      ),
-    ),
-  );
-} finally {
-      setState(() => _loading = false);
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
