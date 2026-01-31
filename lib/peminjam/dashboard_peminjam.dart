@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:peminjaman_alat/peminjam/ajukan_peminjaman.dart';
+import 'package:peminjaman_alat/peminjam/log_aktivitas.dart';
 import 'package:peminjaman_alat/peminjam/profile_peminjam.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../auth/login_page.dart';
@@ -125,6 +126,16 @@ void hapusDariKeranjang(int alatId) {
               icon: Icons.assignment,
               title: 'Peminjaman Saya',
               onTap: () => Navigator.pop(context),
+            ),
+            _menuTile(
+              icon: Icons.history,
+              title: 'Log Aktivitas',
+              onTap: () => Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const LogAktivitasPagePeminjam(),
+                ),
+              ),
             ),
 
             const Spacer(),

@@ -21,6 +21,11 @@ class _CrudAlatPageState extends State<CrudAlatPage> {
   Future<List<dynamic>> _getKategori() async {
     return await supabase.from('kategori').select();
   }
+  final List<Map<String, String>> kondisiList = [
+  {'value': 'Baik', 'label': 'Baik'},
+  {'value': 'rusak', 'label': 'Rusak'},
+];
+
 
   // ================= TAMBAH / EDIT =================
   void _formAlat({Map? alat}) async {
@@ -28,7 +33,10 @@ class _CrudAlatPageState extends State<CrudAlatPage> {
     final stokC =
         TextEditingController(text: alat != null ? '${alat['stok']}' : '');
     final lokasiC = TextEditingController(text: alat?['lokasi']);
-    String kondisi = alat?['kondisi'] ?? 'baik';
+    String? kondisi = alat != null
+    ? alat['kondisi']?.toString().toLowerCase()
+    : null;
+
     int? kategoriId = alat?['kategori_id'];
 
     final kategori = await _getKategori();
@@ -46,19 +54,17 @@ class _CrudAlatPageState extends State<CrudAlatPage> {
                 decoration: const InputDecoration(labelText: 'Nama Alat'),
               ),
               const SizedBox(height: 12),
-              DropdownButtonFormField<int>(
-                value: kategoriId,
-                items: kategori
-    .map<DropdownMenuItem<int>>(
-      (k) => DropdownMenuItem<int>(
-        value: k['id'] as int,
-        child: Text(k['nama_kategori']),
-      ),
-    )
-    .toList(),
-                onChanged: (v) => kategoriId = v,
-                decoration: const InputDecoration(labelText: 'Kategori'),
-              ),
+              DropdownButtonFormField<String>(
+  value: kondisi,
+  hint: const Text('Pilih kondisi'),
+  items: const [
+    DropdownMenuItem(value: 'baik', child: Text('Baik')),
+    DropdownMenuItem(value: 'rusak', child: Text('Rusak')),
+  ],
+  onChanged: (v) => kondisi = v,
+  decoration: const InputDecoration(labelText: 'Kondisi'),
+),
+
               const SizedBox(height: 12),
               TextField(
                 controller: stokC,
@@ -67,14 +73,17 @@ class _CrudAlatPageState extends State<CrudAlatPage> {
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
-                value: kondisi,
-                items: const [
-                  DropdownMenuItem(value: 'baik', child: Text('Baik')),
-                  DropdownMenuItem(value: 'rusak', child: Text('Rusak')),
-                ],
-                onChanged: (v) => kondisi = v!,
-                decoration: const InputDecoration(labelText: 'Kondisi'),
-              ),
+  value: kondisi,
+  hint: const Text('Pilih kondisi'),
+  items: const [
+    DropdownMenuItem(value: 'baik', child: Text('Baik')),
+    DropdownMenuItem(value: 'rusak', child: Text('Rusak')),
+  ],
+  onChanged: (v) => kondisi = v,
+  decoration: const InputDecoration(labelText: 'Kondisi'),
+),
+
+
               const SizedBox(height: 12),
               TextField(
                 controller: lokasiC,
