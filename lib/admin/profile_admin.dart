@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:peminjaman_alat/admin/drawer_dashboard.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../auth/login_page.dart';
 
@@ -11,6 +12,7 @@ class ProfileAdminPage extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: const Color(0xFFE0E0E0),
+      drawer: const AdminDrawer(),
       body: SafeArea(
         child: Column(
           children: [
@@ -26,10 +28,13 @@ class ProfileAdminPage extends StatelessWidget {
               ),
               child: Row(
                 children: [
-                  IconButton(
-                    icon: const Icon(Icons.arrow_back, color: Colors.white),
-                    onPressed: () => Navigator.pop(context),
-                  ),
+                 Builder(
+  builder: (context) => IconButton(
+    icon: const Icon(Icons.menu, color: Colors.white),
+    onPressed: () => Scaffold.of(context).openDrawer(),
+  ),
+),
+
                   const SizedBox(width: 8),
                   const Text(
                     'Profile',

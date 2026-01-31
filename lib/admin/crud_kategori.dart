@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:peminjaman_alat/admin/drawer_dashboard.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class CrudKategoriPage extends StatefulWidget {
@@ -93,6 +94,8 @@ class _CrudKategoriPageState extends State<CrudKategoriPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      drawer: const AdminDrawer(), // ⬅️ INI
+  backgroundColor: const Color(0xFFE0E0E0),
       appBar: AppBar(
         elevation: 0,
         leading: const BackButton(color: Colors.white),

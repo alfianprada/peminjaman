@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:peminjaman_alat/admin/drawer_dashboard.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class CrudAlatPage extends StatefulWidget {
@@ -161,6 +162,7 @@ class _CrudAlatPageState extends State<CrudAlatPage> {
     @override
 Widget build(BuildContext context) {
   return Scaffold(
+     drawer: const AdminDrawer(),
     backgroundColor: const Color(0xFFE0E0E0),
     body: SafeArea(
       child: Column(
@@ -177,10 +179,13 @@ Widget build(BuildContext context) {
             ),
             child: Row(
               children: [
-                IconButton(
-                  icon: const Icon(Icons.arrow_back, color: Colors.white),
-                  onPressed: () => Navigator.pop(context),
-                ),
+                Builder(
+  builder: (context) => IconButton(
+    icon: const Icon(Icons.menu, color: Colors.white),
+    onPressed: () => Scaffold.of(context).openDrawer(),
+  ),
+),
+
                 const SizedBox(width: 8),
                 const Text(
                   'Manajemen Alat',
