@@ -93,33 +93,29 @@ class _DashboardAdminState extends State<DashboardAdmin> {
             leading: const Icon(Icons.people),
             title: const Text('User'),
             onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => CrudUserPage(
-                  onAddPetugas: () => _showAddUserDialog(context, 'petugas'),
-                  onAddPeminjam: () => _showAddUserDialog(context, 'peminjam'),
-                ),
-              ),
-            ),
+                    context,
+                    MaterialPageRoute(builder: (_) => const CrudUserPage()),
+                  ),
+
           ),
           ListTile(
             leading: const Icon(Icons.build),
-            title: const Text('CRUD Alat'),
+            title: const Text('Manajemen Alat'),
             onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CrudAlatPage())),
           ),
           ListTile(
             leading: const Icon(Icons.category),
-            title: const Text('CRUD Kategori'),
+            title: const Text('Manajemen Kategori'),
             onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CrudKategoriPage())),
           ),
           ListTile(
             leading: const Icon(Icons.assignment),
-            title: const Text('CRUD Peminjaman'),
+            title: const Text('Manajemen Peminjaman'),
             onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CrudPeminjamanPage())),
           ),
           ListTile(
             leading: const Icon(Icons.assignment_return),
-            title: const Text('CRUD Pengembalian'),
+            title: const Text('Manajemen Pengembalian'),
             onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CrudPengembalianPage())),
           ),
           ListTile(

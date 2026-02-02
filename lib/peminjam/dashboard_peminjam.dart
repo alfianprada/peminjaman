@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:peminjaman_alat/peminjam/ajukan_peminjaman.dart';
-import 'package:peminjaman_alat/peminjam/log_aktivitas.dart';
+import 'package:peminjaman_alat/auth/login_page.dart';
+import 'package:peminjaman_alat/peminjam/daftar_alat.dart';
+import 'package:peminjaman_alat/peminjam/peminjaman_saya.dart';
 import 'package:peminjaman_alat/peminjam/profile_peminjam.dart';
+import 'package:peminjaman_alat/peminjam/log_aktivitas.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../auth/login_page.dart';
-import 'package:peminjaman_alat/models/keranjang_items.dart';
+
 
 class DashboardPeminjam extends StatefulWidget {
   const DashboardPeminjam({super.key});
@@ -15,296 +16,249 @@ class DashboardPeminjam extends StatefulWidget {
 
 class _DashboardPeminjamState extends State<DashboardPeminjam> {
   final supabase = Supabase.instance.client;
-  List<KeranjangItem> keranjang = [];
 
-  void kurangiDariKeranjang(int alatId) {
-  final index = keranjang.indexWhere((e) => e.alatId == alatId);
+  String namaPeminjam = '';
+  List kategoriList = [];
+  List alatList = [];
+  String searchText = '';
 
-  if (index != -1) {
-    setState(() {
-      if (keranjang[index].jumlah > 1) {
-        keranjang[index].jumlah--;
-      } else {
-        keranjang.removeAt(index);
-      }
-    });
-  }
-}
-
-void hapusDariKeranjang(int alatId) {
-  setState(() {
-    keranjang.removeWhere((e) => e.alatId == alatId);
-  });
-}
-
-
-  void tambahKeKeranjang(int alatId, String nama) {
-  debugPrint('ADD ALAT -> id: $alatId | nama: $nama');
-
-  final index = keranjang.indexWhere((e) => e.alatId == alatId);
-
-  setState(() {
-    if (index == -1) {
-      keranjang.add(KeranjangItem(alatId: alatId, nama: nama));
-    } else {
-      keranjang[index].jumlah++;
-    }
-  });
-}
-
-
-
+  int? kategoriAktif;
+  bool isLoading = true;
 
   @override
+  void initState() {
+    super.initState();
+    _loadNama();
+    fetchKategori();
+    fetchAlat();
+  }
+
+  // ================= LOAD USER =================
+  Future<void> _loadNama() async {
+    final user = supabase.auth.currentUser;
+    if (user == null) return;
+
+    final data = await supabase
+        .from('users')
+        .select('nama')
+        .eq('id', user.id)
+        .single();
+
+    setState(() => namaPeminjam = data['nama'] ?? 'Peminjam');
+  }
+
+  // ================= FETCH =================
+  Future<void> fetchKategori() async {
+    kategoriList = await supabase
+        .from('kategori')
+        .select()
+        .order('nama_kategori');
+    setState(() {});
+  }
+
+  Future<void> fetchAlat() async {
+    setState(() => isLoading = true);
+
+    alatList = kategoriAktif == null
+        ? await supabase
+            .from('alat')
+            .select('id, nama_alat, stok, kondisi, kategori_id')
+            .order('nama_alat')
+        : await supabase
+            .from('alat')
+            .select('id, nama_alat, stok, kondisi, kategori_id')
+            .eq('kategori_id', kategoriAktif!)
+            .order('nama_alat');
+
+    setState(() => isLoading = false);
+  }
+
+  // ================= UI =================
+  @override
   Widget build(BuildContext context) {
-    final user = Supabase.instance.client.auth.currentUser;
+    final user = supabase.auth.currentUser;
 
     return Scaffold(
       appBar: AppBar(
-  title: const Text('Hallo Petugas, Alfian'),
-  actions: const [
-    Padding(
-      padding: EdgeInsets.only(right: 12),
-      child: Icon(Icons.notifications),
-    ),
-  ],
-  flexibleSpace: Container(
-    decoration: const BoxDecoration(
-      gradient: LinearGradient(
-        colors: [Color(0xFF1976D2), Color(0xFF42A5F5)],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      ),
-    ),
-  ),
-),
-
-      floatingActionButton: keranjang.isEmpty
-    ? null
-    : FloatingActionButton.extended(
-        icon: const Icon(Icons.shopping_cart),
-        label: Text('Ajukan (${keranjang.length})'),
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => AjukanPeminjamanPage(items: keranjang),
+        title: Text('Hallo, $namaPeminjam 👋'),
+        flexibleSpace: const DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFF1976D2), Color(0xFF42A5F5)],
             ),
-          );
-        },
+          ),
+        ),
       ),
 
-
+      // ================= DRAWER =================
       drawer: Drawer(
-        child: Column(
+        child: ListView(
           children: [
             UserAccountsDrawerHeader(
-              currentAccountPicture: const CircleAvatar(
-                child: Icon(Icons.person, size: 32),
-              ),
+
               accountName: const Text('Peminjam'),
               accountEmail: Text(user?.email ?? '-'),
+              currentAccountPicture: const CircleAvatar(
+              child: Icon(Icons.admin_panel_settings),
             ),
+            ),
+            _menuTile(Icons.dashboard, 'Dashboard', () {}),
 
             _menuTile(
-              icon: Icons.person,
-              title: 'Profile',
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const ProfilePeminjamPage()),
-                );
-              },
-            ),
-
-            _menuTile(
-              icon: Icons.build,
-              title: 'Daftar Alat',
-              onTap: () => Navigator.pop(context),
-            ),
-            _menuTile(
-              icon: Icons.assignment,
-              title: 'Peminjaman Saya',
-              onTap: () => Navigator.pop(context),
-            ),
-            _menuTile(
-              icon: Icons.history,
-              title: 'Log Aktivitas',
-              onTap: () => Navigator.pushReplacement(
+              Icons.person,
+              'Profile', () {
+              Navigator.push(context,
+                MaterialPageRoute(builder: (_) => const ProfilePeminjamPage()));
+            }),
+            _menuTile(Icons.build, 'Daftar alat', () {
+              Navigator.push(context,
+                MaterialPageRoute(builder: (_) => const PeminjamanPage()));
+            }),
+            _menuTile(Icons.assignment,'Peminjaman Saya',() {
+              Navigator.push(context,
+                MaterialPageRoute(builder: (_) => const PeminjamanSayaPage()));
+  }),
+            _menuTile(Icons.history, 'Log Aktivitas', () {
+              Navigator.push(context,
+                MaterialPageRoute(builder: (_) => const LogAktivitasPagePeminjam()));
+            }),
+            const Divider(),
+            _menuTile(Icons.logout, 'Logout', () async {
+              await supabase.auth.signOut();
+              if (!context.mounted) return;
+              Navigator.pushAndRemoveUntil(
                 context,
-                MaterialPageRoute(
-                  builder: (_) => const LogAktivitasPagePeminjam(),
-                ),
-              ),
-            ),
-
-            const Spacer(),
-
-            _menuTile(
-              icon: Icons.logout,
-              title: 'Logout',
-              color: Colors.red,
-              onTap: () async {
-                await Supabase.instance.client.auth.signOut();
-                if (!context.mounted) return;
-                Navigator.pushAndRemoveUntil(
-                  context,
-                  MaterialPageRoute(builder: (_) => const LoginPage()),
-                  (_) => false,
-                );
-              },
-            ),
+                MaterialPageRoute(builder: (_) => const LoginPage()),
+                (_) => false,
+              );
+            }, color: Colors.red),
           ],
         ),
       ),
 
-      body: ListView(
+      // ================= BODY =================
+      body: Padding(
         padding: const EdgeInsets.all(16),
-  children: [
-        const Text(
-  'Daftar Alat',
-  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-),
-const SizedBox(height: 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _searchBox(),
+                  const SizedBox(height: 16),
+            const Text('Kategori Alat',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 12),
 
-FutureBuilder(
-  future: supabase.from('alat').select('id, nama_alat, stok'),
-  builder: (context, snapshot) {
-    if (!snapshot.hasData) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    final data = snapshot.data as List;
-
-    return Column(
-      children: data.map((a) {
-        return Card(
-          child: ListTile(
-            leading: const Icon(Icons.build),
-            title: Text(a['nama_alat']),
-            subtitle: Text('Stok: ${a['stok']}'),
-            trailing: IconButton(
-              icon: const Icon(Icons.add_circle, color: Colors.green),
-              onPressed: () {
-  final int alatId = a['id'] as int;
-  final String nama = a['nama_alat'] as String;
-
-  tambahKeKeranjang(alatId, nama);
-},
-
-
-            ),
-          ),
-        );
-      }).toList(),
-    );
-  },
-),
-const SizedBox(height: 24),
-const Text(
-  'Keranjang',
-  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-),
-const SizedBox(height: 8),
-
-keranjang.isEmpty
-    ? const Text('Keranjang masih kosong')
-    : Column(
-        children: keranjang.map((e) {
-          return Card(
-            child: ListTile(
-              title: Text(e.nama),
-              subtitle: Text('Jumlah: ${e.jumlah}'),
-              leading: IconButton(
-                icon: const Icon(Icons.remove),
-                onPressed: () => kurangiDariKeranjang(e.alatId),
-              ),
-              trailing: Row(
-                mainAxisSize: MainAxisSize.min,
+            // ===== KATEGORI =====
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
                 children: [
-                  IconButton(
-                    icon: const Icon(Icons.add),
-                    onPressed: () {
-                      setState(() => e.jumlah++);
-                    },
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.delete, color: Colors.red),
-                    onPressed: () => hapusDariKeranjang(e.alatId),
+                  kategoriChip('Semua', null),
+                  ...kategoriList.map(
+                    (k) => kategoriChip(k['nama_kategori'], k['id']),
                   ),
                 ],
               ),
             ),
-          );
-        }).toList(),
-      ),
 
+            const SizedBox(height: 24),
+            const Text('Daftar Alat',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 12),
 
-
-          const Text(
-            'Menu',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 12),
-
-          _menuCard(
-            icon: Icons.add_circle,
-            title: 'Ajukan Peminjaman',
-            subtitle: 'Pinjam alat bengkel',
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => AjukanPeminjamanPage(
-                  items: keranjang,
-                ),
-                ),
-              );
-            },
-          ),
-          _menuCard(
-            icon: Icons.list_alt,
-            title: 'Status Peminjaman',
-            subtitle: 'Lihat status peminjaman',
-            onTap: () {},
-          ),
-        ]
+            Expanded(
+              child: isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : ListView.builder(
+                      itemCount: alatList.length,
+                      itemBuilder: (_, i) => alatCard(alatList[i]),
+                    ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
+  // ================= WIDGET =================
+  Widget kategoriChip(String label, int? id) {
+    final aktif = kategoriAktif == id;
+    return GestureDetector(
+      onTap: () {
+        setState(() => kategoriAktif = id);
+        fetchAlat();
+      },
+      child: Container(
+        margin: const EdgeInsets.only(right: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: aktif ? Colors.blue : Colors.white,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Text(label,
+            style: TextStyle(color: aktif ? Colors.white : Colors.black)),
+      ),
+    );
+  }
 
-  Widget _menuCard({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required VoidCallback onTap,
-  }) {
-    return Card(
+  Widget alatCard(Map alat) {
+    return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: ListTile(
-        leading: Icon(icon, color: Colors.blue),
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-        subtitle: Text(subtitle),
-        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-        onTap: onTap,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.build, color: Colors.blue, size: 32),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(alat['nama_alat'],
+                    style: const TextStyle(fontWeight: FontWeight.bold)),
+                Text('Kondisi: ${alat['kondisi']}'),
+              ],
+            ),
+          ),
+          Column(
+            children: [
+              const Text('Stok'),
+              Text(alat['stok'].toString(),
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            ],
+          ),
+        ],
       ),
     );
   }
 
-  Widget _menuTile({
-    required IconData icon,
-    required String title,
-    required VoidCallback onTap,
-    Color color = Colors.black,
-  }) {
+  Widget _menuTile(IconData icon, String title, VoidCallback onTap,
+      {Color color = Colors.black}) {
     return ListTile(
       leading: Icon(icon, color: color),
       title: Text(title),
       onTap: onTap,
     );
   }
+  Widget _searchBox() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(30),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 6)],
+      ),
+      child: TextField(
+        onChanged: (value) => setState(() => searchText = value.toLowerCase()),
+        decoration: const InputDecoration(
+          icon: Icon(Icons.search),
+          hintText: 'Cari alat...',
+          border: InputBorder.none,
+        ),
+      ),
+    );
+  }
 }
-
-

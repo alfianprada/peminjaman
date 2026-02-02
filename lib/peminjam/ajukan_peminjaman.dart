@@ -10,13 +10,14 @@ class AjukanPeminjamanPage extends StatefulWidget {
     super.key,
     required this.items,
   });
-
-
+  
   @override
   State<AjukanPeminjamanPage> createState() => _AjukanPeminjamanPageState();
 }
 
 class _AjukanPeminjamanPageState extends State<AjukanPeminjamanPage> {
+  final _formKey = GlobalKey<FormState>();
+
   final _namaC = TextEditingController();
   final _alamatC = TextEditingController();
   final _telpC = TextEditingController();
@@ -46,138 +47,189 @@ class _AjukanPeminjamanPageState extends State<AjukanPeminjamanPage> {
   }
 
   Future<void> _submit() async {
-  if (_namaC.text.isEmpty ||
-      _alamatC.text.isEmpty ||
-      _telpC.text.isEmpty ||
-      _tglPinjam == null ||
-      _tglKembali == null) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Lengkapi semua data')),
-    );
-    return;
-  }
+    if (!_formKey.currentState!.validate()) return;
 
-  setState(() => _loading = true);
-
-  try {
-    final supabase = Supabase.instance.client;
-    final user = supabase.auth.currentUser!;
-    
-    // 1️⃣ INSERT PEMINJAMAN (STATUS PENDING)
-    final peminjaman = await supabase
-        .from('peminjaman')
-        .insert({
-          'user_id': user.id,
-          'nama': _namaC.text,
-          'alamat': _alamatC.text,
-          'no_telepon': _telpC.text,
-          'tanggal_pinjam': _tglPinjam!.toIso8601String(),
-          'tanggal_kembali_rencana': _tglKembali!.toIso8601String(),
-          'keterangan': _ketC.text,
-          'status': 'pending',
-        })
-        .select()
-        .single();
-
-    final int peminjamanId = peminjaman['id'];
-
-    // 2️⃣ INSERT DETAIL PEMINJAMAN
-    for (final item in widget.items) {
-      await supabase.from('detail_peminjaman').insert({
-        'peminjaman_id': peminjamanId,
-        'alat_id': item.alatId,
-        'jumlah': item.jumlah,
-      });
+    if (_tglPinjam == null || _tglKembali == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Tanggal wajib diisi')),
+      );
+      return;
     }
 
-    // 3️⃣ SIMPAN LOG PEMINJAM
-    await simpanLog(
-      aktivitas: 'Mengajukan peminjaman',
-      peminjamanId: peminjamanId,
-      role: 'peminjam',
-    );
+    if (_tglPinjam!.isAtSameMomentAs(_tglKembali!)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content:
+              Text('Tanggal pinjam dan tanggal kembali tidak boleh sama'),
+        ),
+      );
+      return;
+    }
 
-    if (!mounted) return;
+    setState(() => _loading = true);
 
-    Navigator.pop(context);
+    try {
+      final supabase = Supabase.instance.client;
+      final user = supabase.auth.currentUser!;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Peminjaman berhasil diajukan')),
-    );
-  } catch (e) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Terjadi kesalahan')),
-    );
-  } finally {
-    setState(() => _loading = false);
+      final peminjaman = await supabase
+          .from('peminjaman')
+          .insert({
+            'user_id': user.id,
+            'nama': _namaC.text,
+            'alamat': _alamatC.text,
+            'no_telepon': _telpC.text,
+            'tanggal_pinjam': _tglPinjam!.toIso8601String(),
+            'tanggal_kembali_rencana': _tglKembali!.toIso8601String(),
+            'keterangan': _ketC.text,
+            'status': 'pending',
+          })
+          .select()
+          .single();
+
+      final int peminjamanId = peminjaman['id'];
+
+      for (final item in widget.items) {
+        await supabase.from('detail_peminjaman').insert({
+          'peminjaman_id': peminjamanId,
+          'alat_id': item.alatId,
+          'jumlah': item.jumlah,
+        });
+      }
+
+      await simpanLog(
+        aktivitas: 'Mengajukan peminjaman',
+        peminjamanId: peminjamanId,
+        role: 'peminjam',
+      );
+
+      if (!mounted) return;
+
+      Navigator.pop(context);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Peminjaman berhasil diajukan')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Terjadi kesalahan')),
+      );
+    } finally {
+      setState(() => _loading = false);
+    }
   }
-}
-
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Ajukan Peminjaman')),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          const Text(
-  'Alat Dipinjam',
-  style: TextStyle(fontWeight: FontWeight.bold),
-),
-const SizedBox(height: 8),
-
-...widget.items.map((e) => Card(
-  child: ListTile(
-    title: Text(e.nama),
-    trailing: Text('x${e.jumlah}'),
-  ),
-)),
-const SizedBox(height: 16),
-
-          _input(_namaC, 'Nama'),
-          _input(_alamatC, 'Alamat'),
-          _input(_telpC, 'Nomor Telepon', keyboard: TextInputType.phone),
-          _dateField(
-            'Tanggal Pinjam',
-            _tglPinjam,
-            () => _pickDate(true),
-          ),
-          _dateField(
-            'Tanggal Dikembalikan',
-            _tglKembali,
-            () => _pickDate(false),
-          ),
-          _input(_ketC, 'Keterangan Meminjam', maxLines: 3),
-
-          const SizedBox(height: 24),
-
-          SizedBox(
-            height: 48,
-            child: ElevatedButton(
-              onPressed: _loading ? null : _submit,
-              child: _loading
-                  ? const CircularProgressIndicator(color: Colors.white)
-                  : const Text('AJUKAN PEMINJAMAN'),
+      body: Form(
+        key: _formKey,
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            const Text(
+              'Alat Dipinjam',
+              style: TextStyle(fontWeight: FontWeight.bold),
             ),
-          )
-        ],
+            const SizedBox(height: 8),
+
+            ...widget.items.map((e) => Card(
+                  child: ListTile(
+                    title: Text(e.nama),
+                    trailing: Text('x${e.jumlah}'),
+                  ),
+                )),
+
+            const SizedBox(height: 16),
+
+            _input(
+              controller: _namaC,
+              label: 'Nama',
+              validator: (v) =>
+                  v == null || v.isEmpty ? 'Nama wajib diisi' : null,
+            ),
+
+            _input(
+              controller: _alamatC,
+              label: 'Alamat',
+              validator: (v) =>
+                  v == null || v.isEmpty ? 'Alamat wajib diisi' : null,
+            ),
+
+            _input(
+              controller: _telpC,
+              label: 'Nomor Telepon',
+              keyboard: TextInputType.number,
+              validator: (v) {
+                if (v == null || v.isEmpty) {
+                  return 'Nomor telepon wajib diisi';
+                }
+                if (!RegExp(r'^[0-9]+$').hasMatch(v)) {
+                  return 'Nomor telepon harus berupa angka';
+                }
+                if (v.length < 10) {
+                  return 'Nomor telepon minimal 10 digit';
+                }
+                return null;
+              },
+            ),
+
+            _dateField(
+              'Tanggal Pinjam',
+              _tglPinjam,
+              () => _pickDate(true),
+            ),
+
+            _dateField(
+              'Tanggal Dikembalikan',
+              _tglKembali,
+              () => _pickDate(false),
+            ),
+
+            _input(
+            controller: _ketC,
+            label: 'Keterangan Meminjam',
+            maxLines: 3,
+            validator: (v) {
+              if (v == null || v.trim().isEmpty) {
+                return 'Keterangan tidak boleh kosong';
+              }
+              return null;
+            },
+          ),
+
+            const SizedBox(height: 24),
+
+            SizedBox(
+              height: 48,
+              child: ElevatedButton(
+                onPressed: _loading ? null : _submit,
+                child: _loading
+                    ? const CircularProgressIndicator(color: Colors.white)
+                    : const Text('AJUKAN PEMINJAMAN'),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _input(
-    TextEditingController c,
-    String label, {
-    int maxLines = 1,
+  Widget _input({
+    required TextEditingController controller,
+    required String label,
     TextInputType keyboard = TextInputType.text,
+    int maxLines = 1,
+    String? Function(String?)? validator,
   }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
-      child: TextField(
-        controller: c,
+      child: TextFormField(
+        controller: controller,
         maxLines: maxLines,
         keyboardType: keyboard,
+        validator: validator,
         decoration: InputDecoration(
           labelText: label,
           border: OutlineInputBorder(
@@ -208,6 +260,6 @@ const SizedBox(height: 16),
         ),
       ),
     );
- }
+  }
 }
 

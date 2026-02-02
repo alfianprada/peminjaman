@@ -3,14 +3,7 @@ import 'package:peminjaman_alat/admin/drawer_dashboard.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class CrudUserPage extends StatefulWidget {
-  final VoidCallback onAddPetugas;
-  final VoidCallback onAddPeminjam;
-
-  const CrudUserPage({
-    super.key,
-    required this.onAddPetugas,
-    required this.onAddPeminjam,
-  });
+  const CrudUserPage({super.key});
 
   @override
   State<CrudUserPage> createState() => _CrudUserPageState();
@@ -18,6 +11,56 @@ class CrudUserPage extends StatefulWidget {
 
 class _CrudUserPageState extends State<CrudUserPage> {
   final supabase = Supabase.instance.client;
+
+  void _showAddUserDialog(String role) {
+  final namaC = TextEditingController();
+  final emailC = TextEditingController();
+  final passC = TextEditingController();
+
+  showDialog(
+    context: context,
+    builder: (_) => AlertDialog(
+      title: Text(role == 'petugas' ? 'Tambah Petugas' : 'Tambah Peminjam'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextField(controller: namaC, decoration: const InputDecoration(labelText: 'Nama')),
+          TextField(controller: emailC, decoration: const InputDecoration(labelText: 'Email')),
+          TextField(
+            controller: passC,
+            obscureText: true,
+            decoration: const InputDecoration(labelText: 'Password'),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('BATAL'),
+        ),
+        ElevatedButton(
+          child: const Text('SIMPAN'),
+          onPressed: () async {
+            final res = await supabase.auth.signUp(
+              email: emailC.text,
+              password: passC.text,
+            );
+
+            await supabase.from('users').insert({
+              'id': res.user!.id,
+              'nama': namaC.text,
+              'email': emailC.text,
+              'role': role,
+            });
+
+            Navigator.pop(context);
+            setState(() {});
+          },
+        ),
+      ],
+    ),
+  );
+}
 
   Future<List<dynamic>> _getUsers() async {
     return await supabase
@@ -148,12 +191,11 @@ Widget build(BuildContext context) {
             child: Row(
               children: [
                 Builder(
-  builder: (context) => IconButton(
-    icon: const Icon(Icons.menu, color: Colors.white),
-    onPressed: () => Scaffold.of(context).openDrawer(),
-  ),
-),
-
+                builder: (context) => IconButton(
+                  icon: const Icon(Icons.menu, color: Colors.white),
+                  onPressed: () => Scaffold.of(context).openDrawer(),
+                ),
+              ),
                 const SizedBox(width: 8),
                 const Text(
                   'Manajemen User',
@@ -258,36 +300,31 @@ Widget build(BuildContext context) {
           color: Colors.orange,
           icon: Icons.badge,
           label: 'Tambah Petugas',
-          onTap: widget.onAddPetugas,
+          onTap: () => _showAddUserDialog('petugas'),
         ),
         const SizedBox(height: 8),
         _fab(
           color: Colors.green,
           icon: Icons.person,
           label: 'Tambah Peminjam',
-          onTap: widget.onAddPeminjam,
+          onTap: () => _showAddUserDialog('peminjam'),
         ),
       ],
-    ),
+     ),
     );
-  }
-
+   }
   Widget _fab({
-    required Color color,
-    required IconData icon,
-    required String label,
-    required VoidCallback onTap,
-  }) {
-    return FloatingActionButton.extended(
-      heroTag: label,
-      backgroundColor: color,
-      icon: Icon(icon),
-      label: Text(label),
-      onPressed: () async {
-        onTap();
-        await Future.delayed(const Duration(milliseconds: 500));
-        setState(() {});
-      },
-    );
-  }
+  required Color color,
+  required IconData icon,
+  required String label,
+  required VoidCallback onTap,
+}) {
+  return FloatingActionButton.extended(
+    heroTag: label,
+    backgroundColor: color,
+    icon: Icon(icon),
+    label: Text(label),
+    onPressed: onTap,
+  );
+}
 }

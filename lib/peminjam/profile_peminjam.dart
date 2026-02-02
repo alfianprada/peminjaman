@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:peminjaman_alat/peminjam/daftar_alat.dart';
+import 'package:peminjaman_alat/peminjam/dashboard_peminjam.dart';
+import 'package:peminjaman_alat/peminjam/log_aktivitas.dart';
+import 'package:peminjaman_alat/peminjam/peminjaman_saya.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../auth/login_page.dart';
 
@@ -11,7 +15,95 @@ class ProfilePeminjamPage extends StatelessWidget {
     final user = supabase.auth.currentUser;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFE0E0E0),
+      appBar: AppBar(
+        title: const Text('Profile Peminjam'),
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFF1976D2), Color(0xFF42A5F5)],
+            ),
+          ),
+        ),
+      ),
+
+      drawer: Drawer(
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: [
+            UserAccountsDrawerHeader(
+              accountName: const Text('Peminjam'),
+              accountEmail: Text(user?.email ?? '-'),
+            ),
+
+            _menuTile(
+              icon: Icons.dashboard,
+              title: 'Dashboard',
+              onTap: () => Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const DashboardPeminjam(),
+                ),
+              ),
+            ),
+
+            _menuTile(
+              icon: Icons.person,
+              title: 'Profile',
+              onTap: () => Navigator.pop(context),
+            ),
+
+            _menuTile(
+              icon: Icons.build,
+              title: 'Daftar Alat',
+              onTap: () => Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const PeminjamanPage(),
+                ),
+              ),
+            ),
+            _menuTile(
+              icon: Icons.assignment,
+              title: 'Peminjaman Saya',
+              onTap: () => Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const PeminjamanSayaPage(),
+                ),
+              ),
+            ),
+
+            _menuTile(
+              icon: Icons.history,
+              title: 'Log Aktivitas',
+              onTap: () => Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const LogAktivitasPagePeminjam(),
+                ),
+              ),
+            ),
+
+            const Divider(),
+
+            _menuTile(
+              icon: Icons.logout,
+              title: 'Logout',
+              color: Colors.red,
+              onTap: () async {
+                await supabase.auth.signOut();
+                if (!context.mounted) return;
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (_) => const LoginPage()),
+                  (_) => false,
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+
       body: SafeArea(
         child: FutureBuilder(
           future: supabase
@@ -29,33 +121,7 @@ class ProfilePeminjamPage extends StatelessWidget {
             return Column(
               children: [
                 // ===== HEADER =====
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                  decoration: const BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [Color(0xFF0D47A1), Color(0xFF1976D2)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.arrow_back, color: Colors.white),
-                        onPressed: () => Navigator.pop(context),
-                      ),
-                      const SizedBox(width: 8),
-                      const Text(
-                        'Profile Peminjam',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+                
 
                 const SizedBox(height: 32),
 
@@ -129,6 +195,18 @@ class ProfilePeminjamPage extends StatelessWidget {
           const Divider(thickness: 1),
         ],
       ),
+    );
+  }
+  Widget _menuTile({
+    required IconData icon,
+    required String title,
+    required VoidCallback onTap,
+    Color color = Colors.black,
+  }) {
+    return ListTile(
+      leading: Icon(icon, color: color),
+      title: Text(title),
+      onTap: onTap,
     );
   }
 }

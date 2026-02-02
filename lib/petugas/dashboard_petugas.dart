@@ -15,9 +15,11 @@ class DashboardPetugas extends StatefulWidget {
 class _DashboardPetugasState extends State<DashboardPetugas> {
   final supabase = Supabase.instance.client;
   final user = Supabase.instance.client.auth.currentUser;
+  String namaPeminjam = '';
 
   List kategoriList = [];
   List alatList = [];
+  String searchText = '';
 
   int? kategoriAktif;
   bool isLoading = true;
@@ -27,7 +29,23 @@ class _DashboardPetugasState extends State<DashboardPetugas> {
     super.initState();
     fetchKategori();
     fetchAlat();
+    _loadNamaPeminjam();
   }
+
+  Future<void> _loadNamaPeminjam() async {
+  final user = supabase.auth.currentUser;
+  if (user == null) return;
+
+  final data = await supabase
+      .from('users')
+      .select('nama')
+      .eq('id', user.id)
+      .single();
+
+  setState(() {
+    namaPeminjam = data['nama'] ?? 'Petugas';
+  });
+}
 
   // ================= FETCH DATA =================
 
@@ -66,7 +84,13 @@ class _DashboardPetugasState extends State<DashboardPetugas> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Dashboard Petugas'),
+  title: Text('Hallo, $namaPeminjam 👋'),
+  actions: const [
+    Padding(
+      padding: EdgeInsets.only(right: 12),
+      child: Icon(Icons.notifications),
+    ),
+  ],
         flexibleSpace: const DecoratedBox(
           decoration: BoxDecoration(
             gradient: LinearGradient(
@@ -84,6 +108,9 @@ class _DashboardPetugasState extends State<DashboardPetugas> {
             UserAccountsDrawerHeader(
               accountName: const Text('Petugas'),
               accountEmail: Text(user?.email ?? '-'),
+              currentAccountPicture: const CircleAvatar(
+              child: Icon(Icons.admin_panel_settings),
+            ),
             ),
 
             _menuTile(
@@ -150,6 +177,8 @@ class _DashboardPetugasState extends State<DashboardPetugas> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            _searchBox(),
+                  const SizedBox(height: 16),
             const Text(
               'Kategori Alat',
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
@@ -276,6 +305,24 @@ class _DashboardPetugasState extends State<DashboardPetugas> {
       leading: Icon(icon, color: color),
       title: Text(title),
       onTap: onTap,
+    );
+  }
+  Widget _searchBox() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(30),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 6)],
+      ),
+      child: TextField(
+        onChanged: (value) => setState(() => searchText = value.toLowerCase()),
+        decoration: const InputDecoration(
+          icon: Icon(Icons.search),
+          hintText: 'Cari alat...',
+          border: InputBorder.none,
+        ),
+      ),
     );
   }
 }

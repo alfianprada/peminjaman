@@ -54,10 +54,7 @@ class AdminDrawer extends StatelessWidget {
             leading: const Icon(Icons.people),
             title: const Text('Manajemen User'),
             onTap: () => go(
-              CrudUserPage(
-                onAddPetugas: () {},
-                onAddPeminjam: () {},
-              ),
+              CrudUserPage(),
             ),
           ),
 
