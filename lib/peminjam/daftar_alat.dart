@@ -1,10 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:peminjaman_alat/auth/login_page.dart';
 import 'package:peminjaman_alat/peminjam/ajukan_peminjaman.dart';
-import 'package:peminjaman_alat/peminjam/dashboard_peminjam.dart';
-import 'package:peminjaman_alat/peminjam/log_aktivitas.dart';
-import 'package:peminjaman_alat/peminjam/peminjaman_saya.dart';
-import 'package:peminjaman_alat/peminjam/profile_peminjam.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:peminjaman_alat/models/keranjang_items.dart';
 
@@ -105,117 +100,91 @@ class _PeminjamanPageState extends State<PeminjamanPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Daftar Alat'),
-        actions: [
-    Stack(
-      children: [
-        IconButton(
-          icon: const Icon(Icons.shopping_cart),
-          onPressed: () => _showKeranjang(),
-        ),
-        if (keranjang.isNotEmpty)
-          Positioned(
-            right: 6,
-            top: 6,
-            child: CircleAvatar(
-              radius: 9,
-              backgroundColor: Colors.red,
-              child: Text(
-                keranjang.length.toString(),
-                style: const TextStyle(fontSize: 12, color: Colors.white),
-              ),
-            ),
-          ),
-      ],
-    )
-  ],
-        flexibleSpace: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Color(0xFF1976D2), Color(0xFF42A5F5)],
-            ),
-          ),
-        ),
+      appBar: PreferredSize(
+  preferredSize: const Size.fromHeight(90),
+  child: Container(
+    decoration: const BoxDecoration(
+      gradient: LinearGradient(
+        colors: [Color(0xFF1976D2), Color(0xFF42A5F5)],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
       ),
-
-      drawer: Drawer(
-        child: ListView(
-          padding: EdgeInsets.zero,
+    ),
+    child: SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.only(
+          left: 16,
+          right: 16,
+          top: 4, // 🔽 supaya tidak mepet atas
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            UserAccountsDrawerHeader(
-              accountName: const Text('Peminjam'),
-              accountEmail: Text(user?.email ?? '-'),
+            // 🧰 LOGO APLIKASI
+            Container(
+              padding: const EdgeInsets.all(0),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Image.asset(
+                'assets/images/logo.png',
+                width: 60,
+                height: 60,
+                fit: BoxFit.contain,
+              ),
             ),
 
-            _menuTile(
-              icon: Icons.dashboard,
-              title: 'Dashboard',
-              onTap: () => Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const DashboardPeminjam(),
+            const SizedBox(width: 12),
+
+            // 📦 JUDUL HALAMAN
+            const Expanded(
+              child: Text(
+                'Daftar Alat',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
             ),
 
-            _menuTile(
-              icon: Icons.person,
-              title: 'Profile',
-              onTap: () => Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const ProfilePeminjamPage(),
+            // 🛒 KERANJANG (FUNGSI ASLI – TIDAK DIUBAH)
+            Stack(
+              children: [
+                IconButton(
+                  icon: const Icon(
+                    Icons.shopping_cart,
+                    color: Colors.white,
+                  ),
+                  onPressed: () => _showKeranjang(),
                 ),
-              ),
-            ),
-
-            _menuTile(
-              icon: Icons.build,
-              title: 'Daftar Alat',
-              onTap: () => Navigator.pop(context),
-            ),
-            _menuTile(
-              icon: Icons.assignment,
-              title: 'Peminjaman Saya',
-              onTap: () => Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const PeminjamanSayaPage(),
-                ),
-              ),
-            ),
-
-            _menuTile(
-              icon: Icons.history,
-              title: 'Log Aktivitas',
-              onTap: () => Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const LogAktivitasPagePeminjam(),
-                ),
-              ),
-            ),
-
-            const Divider(),
-
-            _menuTile(
-              icon: Icons.logout,
-              title: 'Logout',
-              color: Colors.red,
-              onTap: () async {
-                await supabase.auth.signOut();
-                if (!context.mounted) return;
-                Navigator.pushAndRemoveUntil(
-                  context,
-                  MaterialPageRoute(builder: (_) => const LoginPage()),
-                  (_) => false,
-                );
-              },
+                if (keranjang.isNotEmpty)
+                  Positioned(
+                    right: 6,
+                    top: 6,
+                    child: CircleAvatar(
+                      radius: 9,
+                      backgroundColor: Colors.red,
+                      child: Text(
+                        keranjang.length.toString(),
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
             ),
           ],
         ),
       ),
+    ),
+  ),
+),
+
       body: FutureBuilder(
         future: supabase.from('alat').select('id, nama_alat, stok'),
         builder: (_, snapshot) {
@@ -244,16 +213,5 @@ class _PeminjamanPageState extends State<PeminjamanPage> {
       ),
     );
   }
-  Widget _menuTile({
-    required IconData icon,
-    required String title,
-    required VoidCallback onTap,
-    Color color = Colors.black,
-  }) {
-    return ListTile(
-      leading: Icon(icon, color: color),
-      title: Text(title),
-      onTap: onTap,
-    );
-  }
+  
 }

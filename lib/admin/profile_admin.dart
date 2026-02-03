@@ -29,12 +29,11 @@ class ProfileAdminPage extends StatelessWidget {
               child: Row(
                 children: [
                  Builder(
-  builder: (context) => IconButton(
-    icon: const Icon(Icons.menu, color: Colors.white),
-    onPressed: () => Scaffold.of(context).openDrawer(),
-  ),
-),
-
+                  builder: (context) => IconButton(
+                    icon: const Icon(Icons.menu, color: Colors.white),
+                    onPressed: () => Scaffold.of(context).openDrawer(),
+                  ),
+                ),
                   const SizedBox(width: 8),
                   const Text(
                     'Profile',

@@ -32,13 +32,13 @@ class _PeminjamanMasukPageState extends State<PeminjamanMasukPage> {
   }
 
   Future<void> _approve(int peminjamanId) async {
-  // 1️⃣ Ambil detail peminjaman
+  // Ambil detail peminjaman
   final details = await supabase
       .from('detail_peminjaman')
       .select()
       .eq('peminjaman_id', peminjamanId);
 
-  // 2️⃣ Kurangi stok tiap alat
+  // Kurangi stok tiap alat
   for (final d in details) {
     await supabase.rpc('kurangi_stok', params: {
       'alat_id_input': d['alat_id'],
@@ -46,13 +46,13 @@ class _PeminjamanMasukPageState extends State<PeminjamanMasukPage> {
     });
   }
 
-  // 3️⃣ Update status
+  // Update status
   await supabase
       .from('peminjaman')
       .update({'status': 'disetujui'})
       .eq('id', peminjamanId);
 
-  // 4️⃣ Log aktivitas petugas
+  // Log aktivitas petugas
   await simpanLog(
     aktivitas: 'Menyetujui peminjaman',
     peminjamanId: peminjamanId,
@@ -67,8 +67,6 @@ class _PeminjamanMasukPageState extends State<PeminjamanMasukPage> {
 
   setState(() {});
 }
-
-
 
   Future<void> _reject(int peminjamanId) async {
   // 1️⃣ Update status peminjaman
@@ -95,22 +93,116 @@ class _PeminjamanMasukPageState extends State<PeminjamanMasukPage> {
   setState(() {});
 }
 
-
+Future<List<dynamic>> _fetchDetailBarang(int peminjamanId) async {
+  return await supabase
+      .from('detail_peminjaman')
+      .select('''
+        jumlah,
+        alat:alat!detail_peminjaman_alat_id_fkey (
+          nama_alat
+        )
+      ''')
+      .eq('peminjaman_id', peminjamanId);
+}
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       // ================= APP BAR SAMA =================
-      appBar: AppBar(
-        title: const Text('Peminjaman Masuk'),
-        flexibleSpace: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Color(0xFF1976D2), Color(0xFF42A5F5)],
+      appBar: PreferredSize(
+  preferredSize: const Size.fromHeight(90),// tinggi AppBar
+  child: Container(
+    decoration: const BoxDecoration(
+      gradient: LinearGradient(
+        colors: [Color(0xFF1976D2), Color(0xFF42A5F5)],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      ),
+    ),
+    child: SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.only(
+          left: 16,
+          right: 16,
+          top: 4, // 👈 INI YANG BIKIN TURUN
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            // ☰ MENU
+            Builder(
+              builder: (context) => IconButton(
+                icon: const Icon(Icons.menu, color: Colors.white),
+                onPressed: () => Scaffold.of(context).openDrawer(),
+              ),
             ),
-          ),
+
+            const SizedBox(width: 10),
+
+            // 🧰 LOGO APLIKASI
+            Container(
+              padding: const EdgeInsets.all(0),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Image.asset(
+                'assets/images/logo.png',
+                width: 65,
+                height: 65,
+                fit: BoxFit.contain,
+                // hapus kalau logo berwarna
+              ),
+            ),
+
+            const SizedBox(width: 10),
+
+            // 👤 NAMA + ROLE
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Peminjaman Masuk',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Text(
+                      'Petugas',
+                      style: TextStyle(
+                        color: Colors.white70,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
+    ),
+  ),
+
+
+),
 
       // ================= DRAWER SAMA =================
       drawer: Drawer(
@@ -120,6 +212,9 @@ class _PeminjamanMasukPageState extends State<PeminjamanMasukPage> {
             UserAccountsDrawerHeader(
               accountName: const Text('Petugas'),
               accountEmail: Text(user?.email ?? '-'),
+              currentAccountPicture: const CircleAvatar(
+              child: Icon(Icons.admin_panel_settings),
+              ),
             ),
 
             _menuTile(
@@ -195,42 +290,176 @@ class _PeminjamanMasukPageState extends State<PeminjamanMasukPage> {
           }
 
           return ListView.builder(
-            itemCount: data.length,
-            itemBuilder: (context, i) {
-              final p = data[i];
+          padding: const EdgeInsets.all(12),
+          itemCount: data.length,
+          itemBuilder: (context, i) {
+            final p = data[i];
 
-              return Card(
-                margin: const EdgeInsets.all(12),
-                child: ListTile(
-                  title: Text(p['nama']),
-                  subtitle: Text(
-                    'Pinjam: ${p['tanggal_pinjam'].substring(0, 10)}\n'
-                    'Kembali: ${p['tanggal_kembali_rencana'].substring(0, 10)}',
-                  ),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      ElevatedButton.icon(
-                        icon: const Icon(Icons.check),
-                        label: const Text('Approve'),
-                        style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.green),
-                        onPressed: () => _approve(p['id']),
-                      ),
-                      const SizedBox(width: 6),
-                      ElevatedButton.icon(
-                        icon: const Icon(Icons.close),
-                        label: const Text('Reject'),
-                        style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.red),
-                        onPressed: () => _reject(p['id']),
-                      ),
-                    ],
+          return Card(
+            elevation: 4,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+          margin: const EdgeInsets.only(bottom: 12),
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+            // ===== NAMA + STATUS =====
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  p['nama'],
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
-              );
-            },
-          );
+                const Chip(
+                  label: Text(
+                    'PENDING',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                  backgroundColor: Colors.orange,
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 10),
+
+            // ===== TANGGAL =====
+            Row(
+              children: [
+                const Icon(Icons.calendar_today, size: 16),
+                const SizedBox(width: 6),
+                Text(
+                  'Pinjam: ${p['tanggal_pinjam'].substring(0, 10)}',
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                const Icon(Icons.event_available, size: 16),
+                const SizedBox(width: 6),
+                Text(
+                  'Kembali: ${p['tanggal_kembali_rencana'].substring(0, 10)}',
+                ),
+              ],
+            ),
+
+            const Divider(height: 10),
+            const SizedBox(height: 10),
+
+            // ===== BARANG DIPINJAM =====
+            ExpansionTile(
+              tilePadding: EdgeInsets.zero,
+              leading: const Icon(Icons.inventory_2_outlined),
+              title: const Text(
+                'Barang yang Dipinjam',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                ),
+              ),
+              children: [
+                FutureBuilder<List<dynamic>>(
+                  future: _fetchDetailBarang(p['id']),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Padding(
+                        padding: EdgeInsets.all(12),
+                        child: CircularProgressIndicator(),
+                      );
+                    }
+
+                    if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                      return const Padding(
+                        padding: EdgeInsets.all(12),
+                        child: Text('Tidak ada barang'),
+                      );
+                    }
+
+                    final items = snapshot.data!;
+
+                    return Column(
+                      children: items.map((item) {
+                        return ListTile(
+                          leading: const Icon(Icons.build_circle_outlined),
+                          title: Text(item['alat']['nama_alat']),
+                          trailing: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.blue.shade50,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              'x${item['jumlah']}',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    );
+                  },
+                ),
+              ],
+            ),
+
+            const Divider(height: 20),
+
+            // ===== BUTTON ACTION =====
+            Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              ElevatedButton.icon(
+                icon: const Icon(Icons.check_circle_outline, size: 20,color: Colors.black),
+                label: const Text(
+                  'Approve',
+                  style: TextStyle(fontSize: 14,color: Colors.black),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green,
+                  minimumSize: const Size(110, 42), // ⬅ PERBESAR TOMBOL
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                onPressed: () => _approve(p['id']),
+              ),
+              const SizedBox(width: 12),
+              ElevatedButton.icon(
+                icon: const Icon(Icons.cancel_outlined, size: 20,color: Color.fromARGB(255, 255, 255, 255)),
+                label: const Text(
+                  'Reject',
+                  style: TextStyle(fontSize: 14,color: Color.fromARGB(255, 255, 255, 255)),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  minimumSize: const Size(110, 42), // ⬅ PERBESAR TOMBOL
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                onPressed: () => _reject(p['id']),
+              ),
+            ],
+          ),
+          ],
+        ),
+      ),
+    );
+  },
+);
         },
       ),
     );

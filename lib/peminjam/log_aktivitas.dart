@@ -1,9 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:peminjaman_alat/auth/login_page.dart';
-import 'package:peminjaman_alat/peminjam/daftar_alat.dart';
-import 'package:peminjaman_alat/peminjam/dashboard_peminjam.dart';
-import 'package:peminjaman_alat/peminjam/peminjaman_saya.dart';
-import 'package:peminjaman_alat/peminjam/profile_peminjam.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class LogAktivitasPagePeminjam extends StatelessWidget {
@@ -13,7 +8,6 @@ class LogAktivitasPagePeminjam extends StatelessWidget {
   Widget build(BuildContext context) {
     final supabase = Supabase.instance.client;
     final userId = supabase.auth.currentUser?.id;
-    final user = supabase.auth.currentUser;
 
 
     // ================= QUERY LOG PEMINJAM =================
@@ -42,84 +36,6 @@ class LogAktivitasPagePeminjam extends StatelessWidget {
               colors: [Color(0xFF1976D2), Color(0xFF42A5F5)],
             ),
           ),
-        ),
-      ),
-
-      drawer: Drawer(
-        child: ListView(
-          padding: EdgeInsets.zero,
-          children: [
-            UserAccountsDrawerHeader(
-              accountName: const Text('Peminjam'),
-              accountEmail: Text(user?.email ?? '-'),
-            ),
-
-            _menuTile(
-              icon: Icons.dashboard,
-              title: 'Dashboard',
-              onTap: () => Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const DashboardPeminjam(),
-                ),
-              ),
-            ),
-
-            _menuTile(
-              icon: Icons.person,
-              title: 'Profile',
-              onTap: () => Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const ProfilePeminjamPage(),
-                ),
-              ),
-            ),
-
-            _menuTile(
-              icon: Icons.build,
-              title: 'Daftar Alat',
-              onTap: () => Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const PeminjamanPage(),
-                ),
-              ),
-            ),
-            _menuTile(
-              icon: Icons.assignment,
-              title: 'Peminjaman Saya',
-              onTap: () => Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const PeminjamanSayaPage(),
-                ),
-              ),
-            ),
-
-            _menuTile(
-              icon: Icons.history,
-              title: 'Log Aktivitas',
-              onTap: () => Navigator.pop(context), // halaman aktif
-            ),
-
-            const Divider(),
-
-            _menuTile(
-              icon: Icons.logout,
-              title: 'Logout',
-              color: Colors.red,
-              onTap: () async {
-                await supabase.auth.signOut();
-                if (!context.mounted) return;
-                Navigator.pushAndRemoveUntil(
-                  context,
-                  MaterialPageRoute(builder: (_) => const LoginPage()),
-                  (_) => false,
-                );
-              },
-            ),
-          ],
         ),
       ),
       body: FutureBuilder<List<dynamic>>(
@@ -169,18 +85,6 @@ class LogAktivitasPagePeminjam extends StatelessWidget {
           );
         },
       ),
-    );
-  }
-  Widget _menuTile({
-    required IconData icon,
-    required String title,
-    required VoidCallback onTap,
-    Color color = Colors.black,
-  }) {
-    return ListTile(
-      leading: Icon(icon, color: color),
-      title: Text(title),
-      onTap: onTap,
     );
   }
 }

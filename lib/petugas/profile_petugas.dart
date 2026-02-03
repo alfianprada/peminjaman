@@ -13,8 +13,113 @@ class ProfilePetugasPage extends StatelessWidget {
     final supabase = Supabase.instance.client;
     final user = supabase.auth.currentUser;
 
+Future<int> countPendingPeminjaman() async {
+  final supabase = Supabase.instance.client;
+
+  final data = await supabase
+      .from('peminjaman')
+      .select('id')
+      .eq('status', 'pending');
+
+  return data.length;
+}
+
     return Scaffold(
       backgroundColor: const Color(0xFFE0E0E0),
+      appBar: PreferredSize(
+  preferredSize: const Size.fromHeight(90),// tinggi AppBar
+  child: Container(
+    decoration: const BoxDecoration(
+      gradient: LinearGradient(
+        colors: [Color(0xFF1976D2), Color(0xFF42A5F5)],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      ),
+    ),
+    child: SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.only(
+          left: 16,
+          right: 16,
+          top: 4, // 👈 INI YANG BIKIN TURUN
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            // ☰ MENU
+            Builder(
+              builder: (context) => IconButton(
+                icon: const Icon(Icons.menu, color: Colors.white),
+                onPressed: () => Scaffold.of(context).openDrawer(),
+              ),
+            ),
+
+            const SizedBox(width: 10),
+
+            // 🧰 LOGO APLIKASI
+            Container(
+              padding: const EdgeInsets.all(0),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Image.asset(
+                'assets/images/logo.png',
+                width: 65,
+                height: 65,
+                fit: BoxFit.contain,
+                // hapus kalau logo berwarna
+              ),
+            ),
+
+            const SizedBox(width: 10),
+
+            // 👤 NAMA + ROLE
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Profile',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Text(
+                      'Petugas',
+                      style: TextStyle(
+                        color: Colors.white70,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  ),
+
+
+),
 
       // ================= DRAWER (SAMA DENGAN DASHBOARD) =================
       drawer: Drawer(
@@ -24,6 +129,9 @@ class ProfilePetugasPage extends StatelessWidget {
             UserAccountsDrawerHeader(
               accountName: const Text('Petugas'),
               accountEmail: Text(user?.email ?? '-'),
+              currentAccountPicture: const CircleAvatar(
+              child: Icon(Icons.admin_panel_settings),
+              ),
             ),
 
             _menuTile(
@@ -43,14 +151,13 @@ class ProfilePetugasPage extends StatelessWidget {
               onTap: () => Navigator.pop(context), // sudah di profile
             ),
 
-            _menuTile(
+            menuWithBadgeStateless(
               icon: Icons.assignment,
               title: 'Peminjaman Masuk',
+              badgeFuture: countPendingPeminjaman(),
               onTap: () => Navigator.pushReplacement(
                 context,
-                MaterialPageRoute(
-                  builder: (_) => const PeminjamanMasukPage(),
-                ),
+                MaterialPageRoute(builder: (_) => const PeminjamanMasukPage()),
               ),
             ),
 
@@ -103,36 +210,7 @@ class ProfilePetugasPage extends StatelessWidget {
             return Column(
               children: [
                 // ================= HEADER =================
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 14),
-                  decoration: const BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [Color(0xFF1976D2), Color(0xFF42A5F5)],
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Builder(
-                        builder: (context) => IconButton(
-                          icon:
-                              const Icon(Icons.menu, color: Colors.white),
-                          onPressed: () =>
-                              Scaffold.of(context).openDrawer(),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      const Text(
-                        'Profile Petugas',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+                
 
                 const SizedBox(height: 32),
 
@@ -216,6 +294,46 @@ class ProfilePetugasPage extends StatelessWidget {
       ),
     );
   }
+Widget menuWithBadgeStateless({
+  required IconData icon,
+  required String title,
+  required VoidCallback onTap,
+  required Future<int> badgeFuture,
+  Color color = Colors.black,
+}) {
+  return FutureBuilder<int>(
+    future: badgeFuture,
+    builder: (context, snapshot) {
+      final count = snapshot.data ?? 0;
+
+      return ListTile(
+        leading: Icon(icon, color: color),
+        title: Text(title),
+        trailing: count > 0
+            ? Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.red,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  count.toString(),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              )
+            : null,
+        onTap: onTap,
+      );
+    },
+  );
+}
 
   Widget _menuTile({
     required IconData icon,

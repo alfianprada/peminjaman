@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:peminjaman_alat/peminjam/main_page.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../admin/dashboard_admin.dart';
 import '../petugas/dashboard_petugas.dart';
-import '../peminjam/dashboard_peminjam.dart';
+
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -52,7 +53,7 @@ class _LoginPageState extends State<LoginPage> {
           page = const DashboardPetugas();
           break;
         default:
-          page = const DashboardPeminjam();
+          page = const PeminjamMainPage();
       }
 
       if (!mounted) return;

@@ -32,6 +32,27 @@ class _DashboardPetugasState extends State<DashboardPetugas> {
     _loadNamaPeminjam();
   }
 
+  Future<int> countPendingPeminjaman() async {
+  final data = await Supabase.instance.client
+      .from('peminjaman')
+      .select('id')
+      .eq('status', 'pending');
+
+  return data.length;
+}
+
+int getTotalAlat() {
+  return alatList.length;
+}
+
+int getTotalStok() {
+  int total = 0;
+  for (var a in alatList) {
+    total += (a['stok'] as int);
+  }
+  return total;
+}
+
   Future<void> _loadNamaPeminjam() async {
   final user = supabase.auth.currentUser;
   if (user == null) return;
@@ -83,22 +104,106 @@ class _DashboardPetugasState extends State<DashboardPetugas> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-  title: Text('Hallo, $namaPeminjam 👋'),
-  actions: const [
-    Padding(
-      padding: EdgeInsets.only(right: 12),
-      child: Icon(Icons.notifications),
+      appBar: PreferredSize(
+  preferredSize: const Size.fromHeight(90),// tinggi AppBar
+  child: Container(
+    decoration: const BoxDecoration(
+      gradient: LinearGradient(
+        colors: [Color(0xFF1976D2), Color(0xFF42A5F5)],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      ),
     ),
-  ],
-        flexibleSpace: const DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Color(0xFF1976D2), Color(0xFF42A5F5)],
+    child: SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.only(
+          left: 16,
+          right: 16,
+          top: 4, // 👈 INI YANG BIKIN TURUN
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            // ☰ MENU
+            Builder(
+              builder: (context) => IconButton(
+                icon: const Icon(Icons.menu, color: Colors.white),
+                onPressed: () => Scaffold.of(context).openDrawer(),
+              ),
             ),
-          ),
+
+            const SizedBox(width: 10),
+
+            // 🧰 LOGO APLIKASI
+            Container(
+              padding: const EdgeInsets.all(0),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Image.asset(
+                'assets/images/logo.png',
+                width: 65,
+                height: 65,
+                fit: BoxFit.contain,
+                // hapus kalau logo berwarna
+              ),
+            ),
+
+            const SizedBox(width: 10),
+
+            // 👤 NAMA + ROLE
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    namaPeminjam,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Text(
+                      'Petugas',
+                      style: TextStyle(
+                        color: Colors.white70,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // 🔔 NOTIFIKASI
+            IconButton(
+              onPressed: () {},
+              icon: const Icon(Icons.notifications, color: Colors.white),
+            ),
+          ],
         ),
       ),
+    ),
+  ),
+
+
+),
 
       // ================= DRAWER =================
       drawer: Drawer(
@@ -131,14 +236,16 @@ class _DashboardPetugasState extends State<DashboardPetugas> {
               ),
             ),
 
-            _menuTile(
+              menuWithBadge(
               icon: Icons.assignment,
               title: 'Peminjaman Masuk',
+              badgeFuture: countPendingPeminjaman(),
               onTap: () => Navigator.pushReplacement(
                 context,
                 MaterialPageRoute(builder: (_) => const PeminjamanMasukPage()),
               ),
             ),
+
 
             _menuTile(
               icon: Icons.history,
@@ -179,6 +286,24 @@ class _DashboardPetugasState extends State<DashboardPetugas> {
           children: [
             _searchBox(),
                   const SizedBox(height: 16),
+                  const SizedBox(height: 16),
+              Row(
+                children: [
+                  _summaryCard(
+                    icon: Icons.inventory_2,
+                    title: 'Total Alat',
+                    value: getTotalAlat().toString(),
+                    color: Colors.blue,
+                  ),
+                  const SizedBox(width: 12),
+                  _summaryCard(
+                    icon: Icons.storage,
+                    title: 'Total Stok',
+                    value: getTotalStok().toString(),
+                    color: Colors.green,
+                  ),
+                ],
+              ),
             const Text(
               'Kategori Alat',
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
@@ -252,17 +377,30 @@ class _DashboardPetugasState extends State<DashboardPetugas> {
   }
 
   Widget alatCard(Map alat) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
+  return Card(
+    elevation: 3,
+    margin: const EdgeInsets.only(bottom: 12),
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(16),
+    ),
+    child: Padding(
       padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-      ),
       child: Row(
         children: [
-          const Icon(Icons.build, color: Colors.blue, size: 34),
-          const SizedBox(width: 12),
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.blue.shade50,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(
+              Icons.build_circle,
+              color: Colors.blue,
+              size: 30,
+            ),
+          ),
+          const SizedBox(width: 14),
+
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -270,17 +408,39 @@ class _DashboardPetugasState extends State<DashboardPetugas> {
                 Text(
                   alat['nama_alat'],
                   style: const TextStyle(
-                    fontSize: 16,
+                    fontSize: 15,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                Text('Kondisi: ${alat['kondisi']}'),
+                const SizedBox(height: 6),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.shade100,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    alat['kondisi'],
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
+
           Column(
             children: [
-              const Text('Stok'),
+              const Text(
+                'Stok',
+                style: TextStyle(fontSize: 12),
+              ),
+              const SizedBox(height: 4),
               Text(
                 alat['stok'].toString(),
                 style: const TextStyle(
@@ -292,8 +452,95 @@ class _DashboardPetugasState extends State<DashboardPetugas> {
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
+
+  Widget menuWithBadge({
+  required IconData icon,
+  required String title,
+  required VoidCallback onTap,
+  required Future<int> badgeFuture,
+  Color color = Colors.black,
+}) {
+  return FutureBuilder<int>(
+    future: badgeFuture,
+    builder: (context, snapshot) {
+      final count = snapshot.data ?? 0;
+
+      return ListTile(
+        leading: Icon(icon, color: color),
+        title: Text(title),
+        trailing: count > 0
+            ? Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.red,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  count.toString(),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              )
+            : null,
+        onTap: onTap,
+      );
+    },
+  );
+}
+Widget _summaryCard({
+  required IconData icon,
+  required String title,
+  required String value,
+  required Color color,
+}) {
+  return Expanded(
+    child: Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        gradient: LinearGradient(
+          colors: [
+            color.withOpacity(0.85),
+            color.withOpacity(0.65),
+          ],
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: Colors.white, size: 28),
+          const SizedBox(height: 12),
+          Text(
+            title,
+            style: const TextStyle(
+              color: Colors.white70,
+              fontSize: 13,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
 
   Widget _menuTile({
     required IconData icon,

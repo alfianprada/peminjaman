@@ -1,9 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:peminjaman_alat/auth/login_page.dart';
-import 'package:peminjaman_alat/peminjam/daftar_alat.dart';
-import 'package:peminjaman_alat/peminjam/peminjaman_saya.dart';
-import 'package:peminjaman_alat/peminjam/profile_peminjam.dart';
-import 'package:peminjaman_alat/peminjam/log_aktivitas.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 
@@ -76,65 +71,101 @@ class _DashboardPeminjamState extends State<DashboardPeminjam> {
   // ================= UI =================
   @override
   Widget build(BuildContext context) {
-    final user = supabase.auth.currentUser;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Hallo, $namaPeminjam 👋'),
-        flexibleSpace: const DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Color(0xFF1976D2), Color(0xFF42A5F5)],
-            ),
-          ),
-        ),
+      appBar: PreferredSize(
+  preferredSize: const Size.fromHeight(90),// tinggi AppBar
+  child: Container(
+    decoration: const BoxDecoration(
+      gradient: LinearGradient(
+        colors: [Color(0xFF1976D2), Color(0xFF42A5F5)],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
       ),
-
-      // ================= DRAWER =================
-      drawer: Drawer(
-        child: ListView(
+    ),
+    child: SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.only(
+          left: 16,
+          right: 16,
+          top: 4, // 👈 INI YANG BIKIN TURUN
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            UserAccountsDrawerHeader(
 
-              accountName: const Text('Peminjam'),
-              accountEmail: Text(user?.email ?? '-'),
-              currentAccountPicture: const CircleAvatar(
-              child: Icon(Icons.admin_panel_settings),
-            ),
-            ),
-            _menuTile(Icons.dashboard, 'Dashboard', () {}),
+            const SizedBox(width: 10),
 
-            _menuTile(
-              Icons.person,
-              'Profile', () {
-              Navigator.push(context,
-                MaterialPageRoute(builder: (_) => const ProfilePeminjamPage()));
-            }),
-            _menuTile(Icons.build, 'Daftar alat', () {
-              Navigator.push(context,
-                MaterialPageRoute(builder: (_) => const PeminjamanPage()));
-            }),
-            _menuTile(Icons.assignment,'Peminjaman Saya',() {
-              Navigator.push(context,
-                MaterialPageRoute(builder: (_) => const PeminjamanSayaPage()));
-  }),
-            _menuTile(Icons.history, 'Log Aktivitas', () {
-              Navigator.push(context,
-                MaterialPageRoute(builder: (_) => const LogAktivitasPagePeminjam()));
-            }),
-            const Divider(),
-            _menuTile(Icons.logout, 'Logout', () async {
-              await supabase.auth.signOut();
-              if (!context.mounted) return;
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(builder: (_) => const LoginPage()),
-                (_) => false,
-              );
-            }, color: Colors.red),
+            // 🧰 LOGO APLIKASI
+            Container(
+              padding: const EdgeInsets.all(0),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Image.asset(
+                'assets/images/logo.png',
+                width: 65,
+                height: 65,
+                fit: BoxFit.contain,
+                // hapus kalau logo berwarna
+              ),
+            ),
+
+            const SizedBox(width: 10),
+
+            // 👤 NAMA + ROLE
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    namaPeminjam,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Text(
+                      'Peminjam',
+                      style: TextStyle(
+                        color: Colors.white70,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // 🔔 NOTIFIKASI
+            IconButton(
+              onPressed: () {},
+              icon: const Icon(Icons.notifications, color: Colors.white),
+            ),
           ],
         ),
       ),
+    ),
+  ),
+
+
+),
 
       // ================= BODY =================
       body: Padding(
@@ -235,14 +266,6 @@ class _DashboardPeminjamState extends State<DashboardPeminjam> {
     );
   }
 
-  Widget _menuTile(IconData icon, String title, VoidCallback onTap,
-      {Color color = Colors.black}) {
-    return ListTile(
-      leading: Icon(icon, color: color),
-      title: Text(title),
-      onTap: onTap,
-    );
-  }
   Widget _searchBox() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12),

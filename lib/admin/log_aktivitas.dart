@@ -43,7 +43,14 @@ class _LogAktivitasPageState extends State<LogAktivitasPage> {
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             onPressed: () async {
               await supabase.from('log_aktivitas').delete().eq('id', id);
-              Navigator.pop(context);
+              if (!context.mounted) return;
+
+WidgetsBinding.instance.addPostFrameCallback((_) {
+  if (Navigator.canPop(context)) {
+    Navigator.pop(context);
+  }
+});
+
               setState(() {}); // refresh list
             },
             child: const Text('HAPUS'),

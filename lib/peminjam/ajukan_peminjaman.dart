@@ -27,6 +27,33 @@ class _AjukanPeminjamanPageState extends State<AjukanPeminjamanPage> {
   DateTime? _tglKembali;
   bool _loading = false;
 
+  Future<bool> _cekStokAlat() async {
+  final supabase = Supabase.instance.client;
+
+  for (final item in widget.items) {
+    final alat = await supabase
+        .from('alat')
+        .select('stok')
+        .eq('id', item.alatId)
+        .single();
+
+    final stok = alat['stok'] as int;
+
+    if (stok < item.jumlah) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Stok ${item.nama} tidak mencukupi (tersisa $stok)',
+          ),
+        ),
+      );
+      return false;
+    }
+  }
+  return true;
+}
+
+
   Future<void> _pickDate(bool isPinjam) async {
     final date = await showDatePicker(
       context: context,
@@ -47,26 +74,30 @@ class _AjukanPeminjamanPageState extends State<AjukanPeminjamanPage> {
   }
 
   Future<void> _submit() async {
-    if (!_formKey.currentState!.validate()) return;
+  if (!_formKey.currentState!.validate()) return;
 
-    if (_tglPinjam == null || _tglKembali == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Tanggal wajib diisi')),
-      );
-      return;
-    }
+  if (_tglPinjam == null || _tglKembali == null) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Tanggal wajib diisi')),
+    );
+    return;
+  }
 
-    if (_tglPinjam!.isAtSameMomentAs(_tglKembali!)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content:
-              Text('Tanggal pinjam dan tanggal kembali tidak boleh sama'),
-        ),
-      );
-      return;
-    }
+  if (_tglPinjam!.isAtSameMomentAs(_tglKembali!)) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Tanggal pinjam dan kembali tidak boleh sama'),
+      ),
+    );
+    return;
+  }
 
-    setState(() => _loading = true);
+  // 🔴 CEK STOK DI SINI
+  final stokAman = await _cekStokAlat();
+  if (!stokAman) return;
+
+  setState(() => _loading = true);
+
 
     try {
       final supabase = Supabase.instance.client;
@@ -90,12 +121,20 @@ class _AjukanPeminjamanPageState extends State<AjukanPeminjamanPage> {
       final int peminjamanId = peminjaman['id'];
 
       for (final item in widget.items) {
-        await supabase.from('detail_peminjaman').insert({
-          'peminjaman_id': peminjamanId,
-          'alat_id': item.alatId,
-          'jumlah': item.jumlah,
-        });
-      }
+  // insert detail
+  await supabase.from('detail_peminjaman').insert({
+    'peminjaman_id': peminjamanId,
+    'alat_id': item.alatId,
+    'jumlah': item.jumlah,
+  });
+
+  // kurangi stok alat
+  await supabase.rpc('kurangi_stok_alat', params: {
+    'p_alat_id': item.alatId,
+    'p_jumlah': item.jumlah,
+  });
+}
+
 
       await simpanLog(
         aktivitas: 'Mengajukan peminjaman',
