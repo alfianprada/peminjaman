@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:peminjaman_alat/peminjam/log_aktivitas.dart';
+import 'package:peminjaman_alat/utils/format_rupiah.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class PeminjamanSayaPage extends StatefulWidget {
@@ -227,31 +228,6 @@ int hitungDenda({
     ),
   ),
 ),
-  //     appBar: AppBar(
-  //       title: const Text('Peminjaman Saya'),
-  //       actions: [
-  //   IconButton(
-  //     icon: const Icon(Icons.history),
-  //     tooltip: 'Riwayat Aktivitas',
-  //     onPressed: () {
-  //       Navigator.push(
-  //         context,
-  //         MaterialPageRoute(
-  //           builder: (_) => const LogAktivitasPagePeminjam(),
-  //         ),
-  //       );
-  //     },
-  //   ),
-  // ],
-  //       flexibleSpace: Container(
-  //         decoration: const BoxDecoration(
-  //           gradient: LinearGradient(
-  //             colors: [Color(0xFF1976D2), Color(0xFF42A5F5)],
-  //           ),
-  //         ),
-  //       ),
-  //     ),
-
       body: FutureBuilder<Map<String, dynamic>>(
   future: fetchAturanDenda(),
   builder: (context, aturanSnap) {
@@ -367,12 +343,13 @@ int hitungDenda({
                     const SizedBox(height: 8),
 
                     Text(
-                      'Denda: Rp $totalDenda',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.red,
-                      ),
-                    ),
+  'Denda: ${formatRupiah(totalDenda)}',
+  style: const TextStyle(
+    fontWeight: FontWeight.bold,
+    color: Colors.red,
+  ),
+),
+
 
                     const SizedBox(height: 12),
 
@@ -391,8 +368,9 @@ int hitungDenda({
                               builder: (_) => AlertDialog(
                                 title: const Text('Konfirmasi'),
                                 content: Text(
-                                  'Denda: Rp $totalDenda\nYakin ingin mengembalikan?',
-                                ),
+  'Denda: ${formatRupiah(totalDenda)}\nYakin ingin mengembalikan?',
+),
+
                                 actions: [
                                   TextButton(
                                     onPressed: () =>

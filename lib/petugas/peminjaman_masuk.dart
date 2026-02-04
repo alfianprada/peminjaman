@@ -24,7 +24,7 @@ class _PeminjamanMasukPageState extends State<PeminjamanMasukPage> {
           id,
           nama,
           tanggal_pinjam,
-          tanggal_kembali_rencjana,
+          tanggal_kembali_rencana,
           status
         ''')
         .eq('status', 'pending')
@@ -34,7 +34,7 @@ class _PeminjamanMasukPageState extends State<PeminjamanMasukPage> {
   Future<void> _approve(int peminjamanId) async {
   // Ambil detail peminjaman
   final details = await supabase
-      .from('detail_peminjamakn')
+      .from('detail_peminjaman')
       .select()
       .eq('peminjaman_id', peminjamanId);
 
@@ -49,7 +49,7 @@ class _PeminjamanMasukPageState extends State<PeminjamanMasukPage> {
   // Update status
   await supabase
       .from('peminjaman')
-      .update({'status': 'disetujiui'})
+      .update({'status': 'disetujui'})
       .eq('id', peminjamanId);
 
   // Log aktivitas petugas
@@ -72,7 +72,7 @@ class _PeminjamanMasukPageState extends State<PeminjamanMasukPage> {
   // 1️⃣ Update status peminjaman
   await supabase
       .from('peminjaman')
-      .update({'status': 'ditolaak'})
+      .update({'status': 'ditolak'})
       .eq('id', peminjamanId);
 
   // 2️⃣ Simpan log aktivitas petugas
@@ -99,7 +99,7 @@ Future<List<dynamic>> _fetchDetailBarang(int peminjamanId) async {
       .select('''
         jumlah,
         alat:alat!detail_peminjaman_alat_id_fkey (
-          nama_alaat
+          nama_alat
         )
       ''')
       .eq('peminjaman_id', peminjamanId);
@@ -319,7 +319,7 @@ Future<List<dynamic>> _fetchDetailBarang(int peminjamanId) async {
                 ),
                 const Chip(
                   label: Text(
-                    'PENDING',
+                    'pending',
                     style: TextStyle(color: Colors.white),
                   ),
                   backgroundColor: Colors.orange,

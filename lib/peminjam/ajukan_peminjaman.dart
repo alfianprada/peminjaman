@@ -27,32 +27,6 @@ class _AjukanPeminjamanPageState extends State<AjukanPeminjamanPage> {
   DateTime? _tglKembali;
   bool _loading = false;
 
-  Future<bool> _cekStokAlat() async {
-  final supabase = Supabase.instance.client;
-
-  for (final item in widget.items) {
-    final alat = await supabase
-        .from('alat')
-        .select('stok')
-        .eq('id', item.alatId)
-        .single();
-
-    final stok = alat['stok'] as int;
-
-    if (stok < item.jumlah) {
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(
-      content: Text(
-        'Stok ${item.nama} tidak mencukupi (tersisa $stok)',
-      ),
-    ),
-  );
-  return false;
-    }
-  }
-  return true;
-}
-
 
   Future<void> _pickDate(bool isPinjam) async {
     final date = await showDatePicker(
@@ -83,81 +57,89 @@ class _AjukanPeminjamanPageState extends State<AjukanPeminjamanPage> {
     return;
   }
 
-  if (_tglPinjam!.isAtSameMomentAs(_tglKembali!)) {
+  if (!_tglPinjam!.isBefore(_tglKembali!)) {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Tanggal pinjam dan kembali tidak boleh sama'),
+        content: Text('Tanggal kembali harus setelah tanggal pinjam'),
       ),
     );
     return;
   }
 
-  // 🔴 CEK STOK DI SINI
-  final stokAman = await _cekStokAlat();
-  if (!stokAman) return;
-
   setState(() => _loading = true);
 
+  try {
+    final supabase = Supabase.instance.client;
+    final user = supabase.auth.currentUser!;
 
-    try {
-      final supabase = Supabase.instance.client;
-      final user = supabase.auth.currentUser!;
+    /// 1️⃣ INSERT PEMINJAMAN
+    final peminjaman = await supabase
+        .from('peminjaman')
+        .insert({
+          'user_id': user.id,
+          'nama': _namaC.text,
+          'alamat': _alamatC.text,
+          'no_telepon': _telpC.text,
+          'tanggal_pinjam': _tglPinjam!.toIso8601String(),
+          'tanggal_kembali_rencana': _tglKembali!.toIso8601String(),
+          'keterangan': _ketC.text,
+          'status': 'pending',
+        })
+        .select()
+        .single();
 
-      final peminjaman = await supabase
-          .from('peminjaman')
-          .insert({
-            'user_id': user.id,
-            'nama': _namaC.text,
-            'alamat': _alamatC.text,
-            'no_telepon': _telpC.text,
-            'tanggal_pinjam': _tglPinjam!.toIso8601String(),
-            'tanggal_kembali_rencana': _tglKembali!.toIso8601String(),
-            'keterangan': _ketC.text,
-            'status': 'pending',
-          })
-          .select()
-          .single();
+    final int peminjamanId = peminjaman['id'];
 
-      final int peminjamanId = peminjaman['id'];
+    /// 2️⃣ DETAIL + KURANGI STOK
+    for (final item in widget.items) {
+      await supabase.from('detail_peminjaman').insert({
+        'peminjaman_id': peminjamanId,
+        'alat_id': item.alatId,
+        'jumlah': item.jumlah,
+      });
 
-      for (final item in widget.items) {
-  // insert detail
-  await supabase.from('detail_peminjaman').insert({
-    'peminjaman_id': peminjamanId,
-    'alat_id': item.alatId,
-    'jumlah': item.jumlah,
-  });
-
-  // kurangi stok alat
-  await supabase.rpc('kurangi_stok_alat', params: {
-    'p_alat_id': item.alatId,
-    'p_jumlah': item.jumlah,
-  });
-}
-
-
-      await simpanLog(
-        aktivitas: 'Mengajukan peminjaman',
-        peminjamanId: peminjamanId,
-        role: 'peminjam',
+      await supabase.rpc(
+        'kurangi_stok_alat',
+        params: {
+          'p_alat_id': item.alatId,
+          'p_jumlah': item.jumlah,
+        },
       );
-
-      if (!mounted) return;
-
-      Navigator.pop(context);
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Peminjaman berhasil diajukan')),
-      );
-    } catch (e) {
-      debugPrint('ERROR AJUKAN PEMINJAMAN: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Terjadi kesalahan')),
-      );
-    } finally {
-      setState(() => _loading = false);
     }
+
+    /// 3️⃣ LOG
+    await simpanLog(
+      aktivitas: 'Mengajukan peminjaman',
+      peminjamanId: peminjamanId,
+      role: 'peminjam',
+    );
+
+    if (!mounted) return;
+
+    Navigator.pop(context);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Peminjaman berhasil diajukan')),
+    );
+  } on PostgrestException catch (e) {
+    debugPrint('POSTGREST ERROR: ${e.message}');
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(e.message.contains('Stok')
+            ? 'Stok alat tidak mencukupi'
+            : 'Gagal mengajukan peminjaman'),
+      ),
+    );
+  } catch (e) {
+    debugPrint('ERROR AJUKAN PEMINJAMAN: $e');
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Terjadi kesalahan')),
+    );
+  } finally {
+    setState(() => _loading = false);
   }
+}
 
   @override
   Widget build(BuildContext context) {
