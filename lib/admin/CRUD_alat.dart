@@ -51,6 +51,22 @@ String? fileExt;
 
   setState(() {});
 }
+String formatRupiah(int value) {
+  final s = value.toString();
+  final buffer = StringBuffer();
+  int count = 0;
+
+  for (int i = s.length - 1; i >= 0; i--) {
+    buffer.write(s[i]);
+    count++;
+    if (count == 3 && i != 0) {
+      buffer.write('.');
+      count = 0;
+    }
+  }
+
+  return 'Rp.${buffer.toString().split('').reversed.join()}.00';
+}
 
 
   // ================= DATA =================
@@ -65,6 +81,16 @@ String? fileExt;
   Future<List<dynamic>> _getKategori() async {
     return await supabase.from('kategori').select();
   }
+bool isValidRupiah(String value) {
+  final regex = RegExp(r'^Rp\.\d{1,3}(\.\d{3})*.\d{2}$');
+  return regex.hasMatch(value);
+}
+
+int rupiahToInt(String value) {
+  final digits = value.replaceAll(RegExp(r'[^0-9]'), '');
+  return int.parse(digits) ~/ 100;
+}
+
 
   // ================= FORM =================
   void _formAlat({Map? alat}) async {
@@ -78,6 +104,11 @@ String? fileExt;
     fotoAlatUrl = alat?['foto_alat'];
 
     final kategoriList = await _getKategori();
+
+    final dendaC = TextEditingController(
+  text: alat != null ? '${alat['denda_per_hari'] ?? 0}' : '',
+);
+
 
     showDialog(
       context: context,
@@ -150,7 +181,12 @@ String? fileExt;
                         ),
                       )
                       .toList(),
-                  onChanged: (v) => kategoriId = v,
+                  onChanged: (v) {
+  setState(() {
+    kategoriId = v;
+  });
+},
+
                   decoration: const InputDecoration(
                     labelText: 'Kategori',
                     prefixIcon: Icon(Icons.category),
@@ -187,6 +223,22 @@ String? fileExt;
                 ),
                 const SizedBox(height: 12),
 
+                // ===== DENDA =====
+TextField(
+  controller: dendaC,
+  keyboardType: TextInputType.number,
+  decoration: InputDecoration(
+    labelText: 'Denda per Hari (Rp)',
+    hintText: 'Rp.1.000.00',
+    prefixIcon: const Icon(Icons.payments),
+    border: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+    ),
+  ),
+),
+const SizedBox(height: 14),
+
+
                 // ===== LOKASI =====
                 TextField(
                   controller: lokasiC,
@@ -212,26 +264,43 @@ String? fileExt;
                       child: ElevatedButton(
                         onPressed: () async {
                           if (namaC.text.isEmpty ||
-                              stokC.text.isEmpty ||
-                              kategoriId == null ||
-                              kondisi == null) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Semua field wajib diisi'),
-                                backgroundColor: Colors.red,
-                              ),
-                            );
-                            return;
-                          }
+    stokC.text.isEmpty ||
+    dendaC.text.isEmpty ||
+    kategoriId == null ||
+    kondisi == null) {
+  ScaffoldMessenger.of(context).showSnackBar(
+    const SnackBar(
+      content: Text('Semua field wajib diisi'),
+      backgroundColor: Colors.red,
+    ),
+  );
+  return;
+}
+
+// 🔴 VALIDASI FORMAT RUPIAH
+if (!isValidRupiah(dendaC.text)) {
+  ScaffoldMessenger.of(context).showSnackBar(
+    const SnackBar(
+      content: Text('Format denda harus Rp.xxx.xxx.00'),
+      backgroundColor: Colors.red,
+    ),
+  );
+  return;
+}
+
+
 
                           final data = {
-                            'nama_alat': namaC.text,
-                            'kategori_id': kategoriId,
-                            'stok': int.parse(stokC.text),
-                            'kondisi': kondisi,
-                            'lokasi': lokasiC.text,
-                            'foto_alat': fotoAlatUrl,
-                          };
+  'nama_alat': namaC.text,
+  'kategori_id': kategoriId,
+  'stok': int.parse(stokC.text),
+  'denda_per_hari': rupiahToInt(dendaC.text),
+  'kondisi': kondisi,
+  'lokasi': lokasiC.text,
+  'foto_alat': fotoAlatUrl,
+};
+
+
 
                           alat == null
                               ? await supabase.from('alat').insert(data)
@@ -262,6 +331,99 @@ String? fileExt;
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: PreferredSize(
+  preferredSize: const Size.fromHeight(90),// tinggi AppBar
+  child: Container(
+    decoration: const BoxDecoration(
+      gradient: LinearGradient(
+        colors: [Color(0xFF1976D2), Color(0xFF42A5F5)],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      ),
+    ),
+    child: SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.only(
+          left: 16,
+          right: 16,
+          top: 4, // 👈 INI YANG BIKIN TURUN
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Builder(
+              builder: (context) => IconButton(
+                icon: const Icon(Icons.menu, color: Colors.white),
+                onPressed: () => Scaffold.of(context).openDrawer(),
+              ),
+            ),
+
+            const SizedBox(width: 10),
+
+            // 🧰 LOGO APLIKASI
+            Container(
+              padding: const EdgeInsets.all(0),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Image.asset(
+                'assets/images/logo.png',
+                width: 65,
+                height: 65,
+                fit: BoxFit.contain,
+                // hapus kalau logo berwarna
+              ),
+            ),
+
+            const SizedBox(width: 10),
+
+            // 👤 NAMA + ROLE
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Manajemen Alat',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Text(
+                      'Admin',
+                      style: TextStyle(
+                        color: Colors.white70,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  ),
+
+
+),
       drawer: const AdminDrawer(),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _formAlat(),
@@ -298,9 +460,32 @@ String? fileExt;
                           )
                         : Icon(Icons.build,
                             color: _stokColor(a['stok'])),
+                            
                     title: Text(a['nama_alat']),
-                    subtitle: Text(
-                        'Kategori: ${a['kategori']?['nama_kategori'] ?? '-'}'),
+                    subtitle: Column(
+  crossAxisAlignment: CrossAxisAlignment.start,
+  children: [
+    Text('Kategori: ${a['kategori']?['nama_kategori'] ?? '-'}'),
+    const SizedBox(height: 4),
+    Row(
+      children: [
+        const Icon(Icons.inventory_2, size: 14),
+        const SizedBox(width: 4),
+        Text(
+          'Stok: ${a['stok']} unit',
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            color: _stokColor(a['stok']),
+          ),
+        ),
+      ],
+    ),
+    Text(
+  'Denda: ${formatRupiah(a['denda_per_hari'] ?? 0)} / hari',
+  style: const TextStyle(fontWeight: FontWeight.w500),
+),
+  ],
+),  
                     trailing: IconButton(
                       icon: const Icon(Icons.edit),
                       onPressed: () => _formAlat(alat: a),

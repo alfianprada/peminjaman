@@ -38,7 +38,7 @@ class _DashboardPeminjamState extends State<DashboardPeminjam> {
         .select('nama')
         .eq('id', user.id)
         .single();
-
+if (!mounted) return;
     setState(() => namaPeminjam = data['nama'] ?? 'Peminjam');
   }
 
@@ -48,6 +48,8 @@ class _DashboardPeminjamState extends State<DashboardPeminjam> {
         .from('kategori')
         .select()
         .order('nama_kategori');
+
+        if (!mounted) return;
     setState(() {});
   }
 
@@ -57,13 +59,15 @@ class _DashboardPeminjamState extends State<DashboardPeminjam> {
     alatList = kategoriAktif == null
         ? await supabase
             .from('alat')
-            .select('id, nama_alat, stok, kondisi, kategori_id')
+            .select('id, nama_alat, stok, kondisi, foto_alat, kategori_id')
             .order('nama_alat')
         : await supabase
             .from('alat')
-            .select('id, nama_alat, stok, kondisi, kategori_id')
+            .select('id, nama_alat, stok, kondisi, foto_alat, kategori_id')
             .eq('kategori_id', kategoriAktif!)
             .order('nama_alat');
+
+            if (!mounted) return;
 
     setState(() => isLoading = false);
   }
@@ -242,8 +246,43 @@ class _DashboardPeminjamState extends State<DashboardPeminjam> {
       ),
       child: Row(
         children: [
-          const Icon(Icons.build, color: Colors.blue, size: 32),
-          const SizedBox(width: 12),
+          Container(
+  width: 44,
+  height: 44,
+  decoration: BoxDecoration(
+    color: const Color(0xFFE3F2FD),
+    borderRadius: BorderRadius.circular(12),
+  ),
+  child: alat['foto_alat'] != null && alat['foto_alat'].toString().isNotEmpty
+    ? ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Image.network(
+          alat['foto_alat'],
+          fit: BoxFit.cover,
+          loadingBuilder: (context, child, loadingProgress) {
+            if (loadingProgress == null) return child;
+            return const Center(
+              child: SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            );
+          },
+          errorBuilder: (_, __, ___) {
+            return const Icon(
+              Icons.build,
+              color: Color(0xFF1976D2),
+            );
+          },
+        ),
+      )
+    : const Icon(
+        Icons.build,
+        color: Color(0xFF1976D2),
+      ),
+
+),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,

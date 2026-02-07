@@ -66,14 +66,14 @@ class AdminDrawer extends StatelessWidget {
 
           ListTile(
             leading: const Icon(Icons.category),
-            title: const Text('Kategori'),
+            title: const Text('Manajemen Kategori'),
             onTap: () => go(const CrudKategoriPage()),
           ),
 
           ListTile(
             leading: const Icon(Icons.assignment),
             title: const Text('Peminjaman'),
-            onTap: () => go(const CrudPeminjamanPage()),
+            onTap: () => go(const CrudPeminjamanAdminPage()),
           ),
 
           ListTile(

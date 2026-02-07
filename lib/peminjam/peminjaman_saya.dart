@@ -30,8 +30,11 @@ class _PeminjamanSayaPageState extends State<PeminjamanSayaPage> {
         detail_peminjaman!detail_peminjaman_peminjaman_id_fkey (
           jumlah,
           alat!detail_peminjaman_alat_id_fkey (
-            nama_alat
-          )
+  nama_alat,
+  harga,
+  denda_per_hari
+)
+
         )
       ''')
       .eq('user_id', user.id)
@@ -54,43 +57,37 @@ int hitungDenda({
   required DateTime tanggalRencana,
   required DateTime tanggalKembali,
   required int hargaAlat,
+  required int dendaPerHariAlat,
   required int jumlah,
   required String kondisi,
   required Map<String, dynamic> aturan,
 }) {
   int denda = 0;
 
-  // 🔹 Hitung keterlambatan
   int telatHari =
       tanggalKembali.difference(tanggalRencana).inDays;
 
   if (telatHari > 0) {
-    final int dendaPerHari =
-        (aturan['denda_telat_per_hari'] as num).toInt();
-
-    denda += telatHari * dendaPerHari;
+    denda +=telatHari * dendaPerHariAlat * jumlah;
   }
 
   final int totalHarga = hargaAlat * jumlah;
 
-  // 🔹 Kondisi rusak
   if (kondisi == 'rusak') {
     final int persenRusak =
         (aturan['persen_rusak'] as num).toInt();
-
     denda += (persenRusak * totalHarga ~/ 100);
   }
 
-  // 🔹 Kondisi hilang
   if (kondisi == 'hilang') {
     final int persenHilang =
         (aturan['persen_hilang'] as num).toInt();
-
     denda += (persenHilang * totalHarga ~/ 100);
   }
 
   return denda;
 }
+
 
 
 
@@ -148,6 +145,7 @@ int hitungDenda({
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
+             const SizedBox(width: 10),
             // 🧰 LOGO APLIKASI
             Container(
               padding: const EdgeInsets.all(0),
@@ -157,31 +155,59 @@ int hitungDenda({
               ),
               child: Image.asset(
                 'assets/images/logo.png',
-                width: 60,
-                height: 60,
+                width: 65,
+                height: 65,
                 fit: BoxFit.contain,
               ),
             ),
 
-            const SizedBox(width: 12),
+            const SizedBox(width: 10),
 
             // 📦 JUDUL HALAMAN
-            const Expanded(
-              child: Text(
-                'Daftar Alat',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Peminjaman Saya',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Text(
+                      'Peminjam',
+                      style: TextStyle(
+                        color: Colors.white70,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
+
 
             // 🛒 KERANJANG (FUNGSI ASLI – TIDAK DIUBAH)
             Stack(
               children: [
                 IconButton(
-      icon: const Icon(Icons.history),
+      icon: const Icon(Icons.history,color: Colors.white,),
       tooltip: 'Riwayat Aktivitas',
        onPressed: () {
          Navigator.push(
@@ -279,13 +305,16 @@ int hitungDenda({
               if (alat == null) continue;
 
               totalDenda += hitungDenda(
-                tanggalRencana: tglRencana,
-                tanggalKembali: tglSekarang,
-                hargaAlat: alat['harga'] ?? 0,
-                jumlah: d['jumlah'],
-                kondisi: 'baik',
-                aturan: aturan,
-              );
+  tanggalRencana: tglRencana,
+  tanggalKembali: tglSekarang,
+  hargaAlat: alat['harga'] ?? 0,
+  dendaPerHariAlat: alat['denda_per_hari'] ?? 0,
+  jumlah: d['jumlah'],
+  kondisi: 'baik',
+  aturan: aturan,
+);
+
+
             }
 
             return Card(

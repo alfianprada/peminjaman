@@ -18,57 +18,88 @@ class _LoginPageState extends State<LoginPage> {
   bool _loading = false;
 
   Future<void> _login() async {
-    if (_emailC.text.isEmpty || _passC.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Email dan password wajib diisi')),
-      );
-      return;
-    }
-
-    setState(() => _loading = true);
-
-    try {
-      final supabase = Supabase.instance.client;
-
-      final res = await supabase.auth.signInWithPassword(
-        email: _emailC.text,
-        password: _passC.text,
-      );
-
-      final user = res.user;
-      if (user == null) throw 'Login gagal';
-
-      final data = await supabase
-          .from('users')
-          .select('role')
-          .eq('id', user.id)
-          .single();
-
-      Widget page;
-      switch (data['role']) {
-        case 'admin':
-          page = const DashboardAdmin();
-          break;
-        case 'petugas':
-          page = const DashboardPetugas();
-          break;
-        default:
-          page = const PeminjamMainPage();
-      }
-
-      if (!mounted) return;
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => page),
-      );
-    } on AuthException {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Email atau password salah')),
-      );
-    } finally {
-      setState(() => _loading = false);
-    }
+  // 1️⃣ Validasi kosong
+  if (_emailC.text.isEmpty || _passC.text.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Email dan password wajib diisi')),
+    );
+    return;
   }
+
+  // 2️⃣ Validasi format email
+  final emailRegex = RegExp(r'^[^@]+@[^@]+\.[^@]+');
+  if (!emailRegex.hasMatch(_emailC.text)) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Format email tidak valid')),
+    );
+    return;
+  }
+
+  setState(() => _loading = true);
+
+  try {
+    final supabase = Supabase.instance.client;
+
+    final res = await supabase.auth.signInWithPassword(
+      email: _emailC.text.trim(),
+      password: _passC.text,
+    );
+
+    final user = res.user;
+    if (user == null) {
+      throw const AuthException('Login gagal');
+    }
+
+    // 3️⃣ Ambil role user
+    final data = await supabase
+        .from('users')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+
+    Widget page;
+    switch (data['role']) {
+      case 'admin':
+        page = const DashboardAdmin();
+        break;
+      case 'petugas':
+        page = const DashboardPetugas();
+        break;
+      default:
+        page = const PeminjamMainPage();
+    }
+
+    if (!mounted) return;
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (_) => page),
+    );
+
+  } on AuthException catch (e) {
+    String message = 'Login gagal';
+
+    // 4️⃣ VALIDASI PESAN ERROR SUPABASE
+    if (e.message.contains('Invalid login credentials')) {
+      message = 'Email atau password salah';
+    } else if (e.message.contains('Email not confirmed')) {
+      message = 'Email belum diverifikasi';
+    } else if (e.message.contains('User not found')) {
+      message = 'Email belum terdaftar';
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+
+  } catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Email belum terdaftar')),
+    );
+  } finally {
+    setState(() => _loading = false);
+  }
+}
+
 
   @override
   Widget build(BuildContext context) {

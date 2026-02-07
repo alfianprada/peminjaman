@@ -40,14 +40,14 @@ class _AjukanPeminjamanPageState extends State<AjukanPeminjamanPage> {
     final stok = alat['stok'] as int;
 
     if (stok < item.jumlah) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Stok ${item.nama} tidak mencukupi (tersisa $stok)',
-          ),
-        ),
-      );
-      return false;
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text(
+        'Stok ${item.nama} tidak mencukupi (tersisa $stok)',
+      ),
+    ),
+  );
+  return false;
     }
   }
   return true;
@@ -150,6 +150,7 @@ class _AjukanPeminjamanPageState extends State<AjukanPeminjamanPage> {
         const SnackBar(content: Text('Peminjaman berhasil diajukan')),
       );
     } catch (e) {
+      debugPrint('ERROR AJUKAN PEMINJAMAN: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Terjadi kesalahan')),
       );

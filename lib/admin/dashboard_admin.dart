@@ -20,7 +20,17 @@ class _DashboardAdminState extends State<DashboardAdmin> {
   final supabase = Supabase.instance.client;
 
   String searchText = '';
-  int? selectedKategoriId;
+  int? kategoriAktif;
+  List kategoriList = [];
+
+  Future<void> fetchKategori() async {
+  final res = await supabase
+      .from('kategori')
+      .select()
+      .order('nama_kategori');
+
+  setState(() => kategoriList = res);
+  }
 
   // ================= ADD USER =================
   void _showAddUserDialog(BuildContext context, String role) {
@@ -111,7 +121,7 @@ class _DashboardAdminState extends State<DashboardAdmin> {
           ListTile(
             leading: const Icon(Icons.assignment),
             title: const Text('Manajemen Peminjaman'),
-            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CrudPeminjamanPage())),
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CrudPeminjamanAdminPage())),
           ),
           ListTile(
             leading: const Icon(Icons.assignment_return),
@@ -144,43 +154,112 @@ class _DashboardAdminState extends State<DashboardAdmin> {
 
   // ================= UI =================
   @override
+void initState() {
+  super.initState();
+  fetchKategori();
+}
+
   Widget build(BuildContext context) {
     final user = supabase.auth.currentUser;
 
     return Scaffold(
+      appBar: PreferredSize(
+  preferredSize: const Size.fromHeight(90),// tinggi AppBar
+  child: Container(
+    decoration: const BoxDecoration(
+      gradient: LinearGradient(
+        colors: [Color(0xFF1976D2), Color(0xFF42A5F5)],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      ),
+    ),
+    child: SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.only(
+          left: 16,
+          right: 16,
+          top: 4, // 👈 INI YANG BIKIN TURUN
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Builder(
+              builder: (context) => IconButton(
+                icon: const Icon(Icons.menu, color: Colors.white),
+                onPressed: () => Scaffold.of(context).openDrawer(),
+              ),
+            ),
+
+            const SizedBox(width: 10),
+
+            // 🧰 LOGO APLIKASI
+            Container(
+              padding: const EdgeInsets.all(0),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Image.asset(
+                'assets/images/logo.png',
+                width: 65,
+                height: 65,
+                fit: BoxFit.contain,
+                // hapus kalau logo berwarna
+              ),
+            ),
+
+            const SizedBox(width: 10),
+
+            // 👤 NAMA + ROLE
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${user?.email?.split('@').first ?? 'Admin'}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Text(
+                      'Admin',
+                      style: TextStyle(
+                        color: Colors.white70,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  ),
+
+
+),
       drawer: _buildDrawer(context),
       body: SafeArea(
         child: Column(
           children: [
-            // ===== HEADER =====
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Color(0xFF0D47A1), Color(0xFF1976D2)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-              ),
-              child: Row(
-                children: [
-                  Builder(
-                    builder: (context) => IconButton(
-                      icon: const Icon(Icons.menu, color: Colors.white),
-                      onPressed: () => Scaffold.of(context).openDrawer(),
-                    ),
-                  ),
-                  Expanded(
-                    child: Text(
-                      'Hallo Admin, ${user?.email?.split('@').first ?? 'Admin'} 👋',
-                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
-                    ),
-                  ),
-                  const Icon(Icons.notifications_none, color: Colors.white),
-                ],
-              ),
-            ),
-
             // ===== CONTENT =====
             Expanded(
               child: ListView(
@@ -226,51 +305,44 @@ class _DashboardAdminState extends State<DashboardAdmin> {
 
   // ================= KATEGORI =================
   Widget _kategoriSectionHorizontal() {
-    return SizedBox(
-      height: 80,
-      child: FutureBuilder(
-        future: supabase.from('kategori').select().order('nama_kategori'),
-        builder: (context, snapshot) {
-          if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
-          final data = snapshot.data as List;
+  return SingleChildScrollView(
+    scrollDirection: Axis.horizontal,
+    physics: const BouncingScrollPhysics(),
+    child: Row(
+      children: [
+        kategoriChip('Semua', null),
+        ...kategoriList.map(
+          (k) => kategoriChip(k['nama_kategori'], k['id']),
+        ),
+      ],
+    ),
+  );
+}
+Widget kategoriChip(String label, int? id) {
+  final isActive = kategoriAktif == id;
 
-          return ListView.separated(
-            scrollDirection: Axis.horizontal,
-            itemCount: data.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 12),
-            itemBuilder: (context, i) {
-              final isSelected = selectedKategoriId == data[i]['id'];
-
-              return GestureDetector(
-                onTap: () {
-                  setState(() {
-                    selectedKategoriId = isSelected ? null : data[i]['id'];
-                  });
-                },
-                child: Container(
-                  width: 90,
-                  decoration: BoxDecoration(
-                    color: isSelected ? const Color(0xFF1976D2) : const Color(0xFFE3F2FD),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Center(
-                    child: Text(
-                      data[i]['nama_kategori'],
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        color: isSelected ? Colors.white : const Color(0xFF0D47A1),
-                      ),
-                    ),
-                  ),
-                ),
-              );
-            },
-          );
-        },
+  return GestureDetector(
+    onTap: () {
+      setState(() => kategoriAktif = id);
+    },
+    child: Container(
+      margin: const EdgeInsets.only(right: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: isActive ? Colors.blue : Colors.white,
+        borderRadius: BorderRadius.circular(20),
       ),
-    );
-  }
+      child: Text(
+        label,
+        style: TextStyle(
+          color: isActive ? Colors.white : Colors.black,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+    ),
+  );
+}
+
 
   // ================= ALAT =================
   Widget _alatSectionCard() {
@@ -281,6 +353,7 @@ class _DashboardAdminState extends State<DashboardAdmin> {
         nama_alat,
         stok,
         kategori_id,
+        foto_alat,
         kategori:kategori_id (nama_kategori)
         ''',
       ),
@@ -293,9 +366,10 @@ class _DashboardAdminState extends State<DashboardAdmin> {
           data = data.where((a) => a['nama_alat'].toLowerCase().contains(searchText)).toList();
         }
 
-        if (selectedKategoriId != null) {
-          data = data.where((a) => a['kategori_id'] == selectedKategoriId).toList();
-        }
+        if (kategoriAktif != null) {
+  data = data.where((a) => a['kategori_id'] == kategoriAktif).toList();
+}
+
 
         if (data.isEmpty) return const Center(child: Text('Data tidak ditemukan'));
 
@@ -312,14 +386,26 @@ class _DashboardAdminState extends State<DashboardAdmin> {
               child: Row(
                 children: [
                   Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFE3F2FD),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(Icons.build, color: Color(0xFF1976D2)),
-                  ),
+  width: 44,
+  height: 44,
+  decoration: BoxDecoration(
+    color: const Color(0xFFE3F2FD),
+    borderRadius: BorderRadius.circular(12),
+  ),
+  child: a['foto_alat'] != null && a['foto_alat'].toString().isNotEmpty
+      ? ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: Image.network(
+            a['foto_alat'],
+            fit: BoxFit.cover,
+          ),
+        )
+      : const Icon(
+          Icons.build,
+          color: Color(0xFF1976D2),
+        ),
+),
+
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
